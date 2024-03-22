@@ -3,7 +3,7 @@ name: release-flow
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+*"
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
   workflow_dispatch:
     inputs:
       version:
@@ -14,7 +14,7 @@ on:
 # ToDo: adapt names
 env:
   # This variable is used to name release output files.
-  GAME_EXECUTABLE_NAME: bevy_game
+  GAME_EXECUTABLE_NAME: roguelike_tutorial
   GAME_OSX_APP_NAME: BevyGame
 
 permissions:

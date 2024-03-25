@@ -6,11 +6,14 @@ mod loading;
 mod menu;
 mod render;
 
+mod logic;
+
 #[cfg(feature = "dev")]
 mod dev;
 
 use crate::audio::InternalAudioPlugin;
 use crate::loading::LoadingPlugin;
+use crate::logic::LogicPlugin;
 use crate::menu::MenuPlugin;
 use crate::render::InternalRenderPlugin;
 
@@ -41,6 +44,7 @@ impl Plugin for GamePlugin {
             MenuPlugin,
             InternalAudioPlugin,
             InternalRenderPlugin,
+            LogicPlugin,
         ));
 
         #[cfg(feature = "dev")]

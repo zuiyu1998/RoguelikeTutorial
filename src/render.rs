@@ -1,3 +1,4 @@
+use crate::map::Map;
 use bevy::prelude::*;
 use bevy_ascii_terminal::prelude::*;
 
@@ -57,12 +58,23 @@ impl Plugin for InternalRenderPlugin {
 pub fn render(
     q_q_position_and_renderable: Query<(&Position, &Renderable)>,
     mut q_render_terminal: Query<&mut Terminal>,
+    map: Res<Map>,
 ) {
     let mut term = match q_render_terminal.get_single_mut() {
         Ok(term) => term,
         Err(_) => return,
     };
     term.clear();
+
+    for x in 0..map.width as i32 {
+        for y in 0..map.heigth as i32 {
+            let idx = map.xy_idx(x, y);
+
+            let tile: FormattedTile = map.tiles[idx].get_renderable().into();
+
+            term.put_char([x, y], tile);
+        }
+    }
 
     q_q_position_and_renderable
         .iter()

@@ -1,3 +1,4 @@
+use crate::map::{new_map, Map};
 use crate::render::{Position, Renderable};
 use crate::GameState;
 use bevy::prelude::*;
@@ -19,10 +20,7 @@ impl Plugin for LogicPlugin {
         );
         app.add_systems(Update, (user_input,));
 
-        app.add_systems(
-            OnEnter(GameState::Playing),
-            (spawn_character, spawn_terminal),
-        );
+        app.add_systems(OnEnter(GameState::Playing), (spawn_character, setup_game));
     }
 }
 
@@ -88,7 +86,7 @@ pub fn spawn_character(mut commands: Commands) {
     ));
 }
 
-pub fn spawn_terminal(mut commands: Commands) {
+pub fn setup_game(mut commands: Commands, mut map: ResMut<Map>) {
     let terminal = Terminal::new([80, 50]).with_border(Border::single_line());
 
     commands.spawn((
@@ -96,4 +94,6 @@ pub fn spawn_terminal(mut commands: Commands) {
         TerminalBundle::from(terminal),
         Name::new("Terminal"),
     ));
+
+    *map = new_map();
 }

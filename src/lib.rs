@@ -3,6 +3,7 @@
 mod audio;
 mod common;
 mod loading;
+mod map;
 mod menu;
 mod render;
 
@@ -14,6 +15,7 @@ mod dev;
 use crate::audio::InternalAudioPlugin;
 use crate::loading::LoadingPlugin;
 use crate::logic::LogicPlugin;
+use crate::map::MapPlugin;
 use crate::menu::MenuPlugin;
 use crate::render::InternalRenderPlugin;
 
@@ -45,6 +47,7 @@ impl Plugin for GamePlugin {
             InternalAudioPlugin,
             InternalRenderPlugin,
             LogicPlugin,
+            MapPlugin,
         ));
 
         #[cfg(feature = "dev")]

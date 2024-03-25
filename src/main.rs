@@ -3,7 +3,7 @@
 
 use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
+use bevy::window::{PrimaryWindow, WindowResolution};
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
 use roguelike_tutorial::GamePlugin;
@@ -22,6 +22,7 @@ fn main() {
                 canvas: Some("#bevy".to_owned()),
                 // Tells wasm not to override default event handling, like F5 and Ctrl+R
                 prevent_default_event_handling: false,
+                resolution: WindowResolution::new(800.0, 600.0),
                 ..default()
             }),
             ..default()

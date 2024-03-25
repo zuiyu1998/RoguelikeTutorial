@@ -32,7 +32,8 @@ codegen-units = 1
 strip = true
 
 [features]
-dev = ["bevy/dynamic_linking"]
+default = ['dev']
+dev = ["bevy/dynamic_linking", "bevy_editor_pls"]
 
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
 #   and android_shared_stdcxx, since that is covered in `mobile`
@@ -68,6 +69,10 @@ webbrowser = { version = "0.8", features = ["hardened"] }
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.29", default-features = false }
 image = { version = "0.24", default-features = false }
+
+bevy_ascii_terminal = { version = "0.15" }
+
+bevy_editor_pls = { version = "0.8", optional = true }
 
 [build-dependencies]
 embed-resource = "1"

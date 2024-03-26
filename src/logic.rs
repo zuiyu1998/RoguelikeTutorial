@@ -5,19 +5,12 @@ use bevy::prelude::*;
 use bevy_ascii_terminal::prelude::*;
 
 #[derive(Component)]
-pub struct LeftMover {}
-
-#[derive(Component)]
 pub struct Player {}
 
 pub struct LogicPlugin;
 
 impl Plugin for LogicPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            FixedUpdate,
-            left_movement.run_if(in_state(GameState::Playing)),
-        );
         app.add_systems(Update, (user_input,));
 
         app.add_systems(OnEnter(GameState::Playing), (spawn_character, setup_game));
@@ -52,29 +45,7 @@ pub fn user_input(
     }
 }
 
-pub fn left_movement(mut q_position: Query<(&mut Position,), With<LeftMover>>) {
-    for (mut position,) in q_position.iter_mut() {
-        position.x -= 1;
-
-        if position.x < 0 {
-            position.x = 79;
-        }
-    }
-}
-
 pub fn spawn_character(mut commands: Commands) {
-    for i in 0..10 {
-        commands.spawn_empty().insert((
-            Position { x: i * 7, y: 20 },
-            Renderable {
-                glyph: '☺',
-                fg: Color::RED,
-                bg: Color::BLACK,
-            },
-            LeftMover {},
-        ));
-    }
-
     commands.spawn_empty().insert((
         Position { x: 40, y: 25 },
         Renderable {

@@ -1,4 +1,4 @@
-use crate::map::{new_map, Map};
+use crate::map::{new_map_rooms_and_corridors, Map};
 use crate::render::{Position, Renderable};
 use crate::GameState;
 use bevy::prelude::*;
@@ -13,13 +13,14 @@ impl Plugin for LogicPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, (user_input,));
 
-        app.add_systems(OnEnter(GameState::Playing), (spawn_character, setup_game));
+        app.add_systems(OnEnter(GameState::Playing), setup_game);
     }
 }
 
 pub fn user_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut q_player: Query<&mut Position, With<Player>>,
+    map: Res<Map>,
 ) {
     let mut x = 0;
     let mut y = 0;
@@ -41,20 +42,8 @@ pub fn user_input(
     }
 
     for mut position in q_player.iter_mut() {
-        position.movement(x, y);
+        position.movement(x, y, &map);
     }
-}
-
-pub fn spawn_character(mut commands: Commands) {
-    commands.spawn_empty().insert((
-        Position { x: 40, y: 25 },
-        Renderable {
-            glyph: '@',
-            fg: Color::YELLOW,
-            bg: Color::BLACK,
-        },
-        Player {},
-    ));
 }
 
 pub fn setup_game(mut commands: Commands, mut map: ResMut<Map>) {
@@ -66,5 +55,22 @@ pub fn setup_game(mut commands: Commands, mut map: ResMut<Map>) {
         Name::new("Terminal"),
     ));
 
-    *map = new_map();
+    let (map_instance, rooms) = new_map_rooms_and_corridors();
+
+    *map = map_instance;
+
+    let first_room_centerr = rooms[0].center();
+
+    commands.spawn_empty().insert((
+        Position {
+            x: first_room_centerr.0,
+            y: first_room_centerr.1,
+        },
+        Renderable {
+            glyph: '@',
+            fg: Color::YELLOW,
+            bg: Color::BLACK,
+        },
+        Player {},
+    ));
 }

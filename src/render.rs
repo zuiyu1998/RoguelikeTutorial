@@ -1,4 +1,4 @@
-use crate::map::Map;
+use crate::map::{Map, TileType};
 use bevy::prelude::*;
 use bevy_ascii_terminal::prelude::*;
 
@@ -9,9 +9,16 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn movement(&mut self, delta_x: i32, delta_y: i32) {
-        self.x = 79.min(0.max(self.x + delta_x));
-        self.y = 79.min(0.max(self.y + delta_y));
+    pub fn movement(&mut self, delta_x: i32, delta_y: i32, map: &Map) {
+        let next_x = 79.min(0.max(self.x + delta_x));
+        let next_y = 79.min(0.max(self.y + delta_y));
+
+        let idx = map.xy_idx(next_x, next_y);
+
+        if map.tiles[idx] == TileType::Floor {
+            self.x = next_x;
+            self.y = next_y;
+        }
     }
 }
 

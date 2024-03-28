@@ -73,6 +73,7 @@ image = { version = "0.24", default-features = false }
 bevy_ascii_terminal = { version = "0.15" }
 
 bracket-random = { version = "0.8" }
+bracket-pathfinding = { version = "0.8" }
 
 bevy_editor_pls = { version = "0.8", optional = true }
 

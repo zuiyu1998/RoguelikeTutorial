@@ -1,4 +1,4 @@
-use crate::map::Map;
+use crate::map::{Map, Viewshed};
 use crate::render::{Position, Renderable};
 use crate::GameState;
 use bevy::prelude::*;
@@ -19,7 +19,7 @@ impl Plugin for LogicPlugin {
 
 pub fn user_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut q_player: Query<&mut Position, With<Player>>,
+    mut q_player: Query<(&mut Position, &mut Viewshed), With<Player>>,
     map: Res<Map>,
 ) {
     let mut x = 0;
@@ -41,8 +41,8 @@ pub fn user_input(
         y -= 1;
     }
 
-    for mut position in q_player.iter_mut() {
-        position.movement(x, y, &map);
+    for (mut position, mut viewshed) in q_player.iter_mut() {
+        position.movement(x, y, &map, &mut viewshed);
     }
 }
 
@@ -72,5 +72,10 @@ pub fn setup_game(mut commands: Commands, mut map: ResMut<Map>) {
             bg: Color::BLACK,
         },
         Player {},
+        Viewshed {
+            visible_tiles: vec![],
+            range: 8,
+            dirty: false,
+        },
     ));
 }

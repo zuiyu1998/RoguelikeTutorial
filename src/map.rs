@@ -1,6 +1,16 @@
-use crate::render::Renderable;
+use crate::render::{Position, Renderable};
 use bevy::prelude::*;
+use bracket_pathfinding::prelude::*;
+use bracket_pathfinding::prelude::{field_of_view, Point};
 use bracket_random::prelude::*;
+
+///视野
+#[derive(Component)]
+pub struct Viewshed {
+    pub visible_tiles: Vec<Point>,
+    pub range: i32,
+    pub dirty: bool,
+}
 
 pub struct Rect {
     pub x1: i32,
@@ -34,14 +44,56 @@ pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Map>();
+
+        app.add_systems(PreUpdate, (update_view,));
+    }
+}
+
+pub fn update_view(mut q_player_view: Query<(&Position, &mut Viewshed)>, mut map: ResMut<Map>) {
+    for (pos, mut viewshed) in q_player_view.iter_mut() {
+        if viewshed.dirty {
+            viewshed.dirty = false;
+
+            viewshed.visible_tiles.clear();
+            viewshed.visible_tiles = field_of_view(Point::new(pos.x, pos.y), viewshed.range, &*map);
+            viewshed.visible_tiles.retain(|p| {
+                p.x >= 0 && p.x < map.width as i32 && p.y >= 0 && p.y < map.height as i32
+            });
+
+            for t in map.visible_tiles.iter_mut() {
+                *t = false
+            }
+
+            for tile in viewshed.visible_tiles.iter() {
+                let idx = map.xy_idx(tile.x, tile.y);
+
+                map.revealed_tiles[idx] = true;
+
+                map.visible_tiles[idx] = true;
+            }
+        }
     }
 }
 
 #[derive(Resource)]
 pub struct Map {
     pub width: usize,
-    pub heigth: usize,
+    pub height: usize,
     pub tiles: Vec<TileType>,
+    pub revealed_tiles: Vec<bool>,
+    pub visible_tiles: Vec<bool>,
+}
+
+impl Algorithm2D for Map {
+    fn dimensions(&self) -> Point {
+        Point::new(self.width, self.height)
+    }
+}
+
+impl BaseMap for Map {
+    fn is_opaque(&self, idx: usize) -> bool {
+        self.tiles[idx as usize] == TileType::Wall
+    }
 }
 
 impl Default for Map {
@@ -49,7 +101,9 @@ impl Default for Map {
         let map = Map {
             tiles: vec![TileType::Wall; 80 * 50],
             width: 80,
-            heigth: 50,
+            height: 50,
+            revealed_tiles: vec![false; 80 * 50],
+            visible_tiles: vec![false; 80 * 50],
         };
 
         map
@@ -64,7 +118,7 @@ impl Map {
     fn apply_horizontal_tunnel(&mut self, x1: i32, x2: i32, y: i32) {
         for x in x1.min(x2)..=x1.max(x2) {
             let idx = self.xy_idx(x, y);
-            if idx > 0 && idx < self.width * self.heigth {
+            if idx > 0 && idx < self.width * self.height {
                 self.tiles[idx] = TileType::Floor;
             }
         }
@@ -82,7 +136,7 @@ impl Map {
     fn apply_vertical_tunnel(&mut self, y1: i32, y2: i32, x: i32) {
         for y in y1.min(y2)..=y1.max(y2) {
             let idx = self.xy_idx(x, y);
-            if idx > 0 && idx < self.width * self.heigth {
+            if idx > 0 && idx < self.width * self.height {
                 self.tiles[idx] = TileType::Floor;
             }
         }

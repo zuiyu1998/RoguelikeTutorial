@@ -1,4 +1,4 @@
-use crate::map::{new_map_rooms_and_corridors, Map};
+use crate::map::Map;
 use crate::render::{Position, Renderable};
 use crate::GameState;
 use bevy::prelude::*;
@@ -55,7 +55,7 @@ pub fn setup_game(mut commands: Commands, mut map: ResMut<Map>) {
         Name::new("Terminal"),
     ));
 
-    let (map_instance, rooms) = new_map_rooms_and_corridors();
+    let (map_instance, rooms) = Map::new_map_rooms_and_corridors();
 
     *map = map_instance;
 

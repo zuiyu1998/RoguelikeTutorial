@@ -1,3 +1,4 @@
+use crate::logic::Player;
 use crate::render::{Position, Renderable};
 use bevy::prelude::*;
 use bracket_pathfinding::prelude::*;
@@ -49,8 +50,12 @@ impl Plugin for MapPlugin {
     }
 }
 
-pub fn update_view(mut q_player_view: Query<(&Position, &mut Viewshed)>, mut map: ResMut<Map>) {
-    for (pos, mut viewshed) in q_player_view.iter_mut() {
+pub fn update_view(
+    mut q_view: Query<(&Position, &mut Viewshed)>,
+    mut map: ResMut<Map>,
+    q_player: Query<Entity, With<Player>>,
+) {
+    for (pos, mut viewshed) in q_view.iter_mut() {
         if viewshed.dirty {
             viewshed.dirty = false;
 
@@ -59,7 +64,11 @@ pub fn update_view(mut q_player_view: Query<(&Position, &mut Viewshed)>, mut map
             viewshed.visible_tiles.retain(|p| {
                 p.x >= 0 && p.x < map.width as i32 && p.y >= 0 && p.y < map.height as i32
             });
+        }
+    }
 
+    for player_entity in q_player.iter() {
+        if let Ok((_, viewshed)) = q_view.get(player_entity) {
             for t in map.visible_tiles.iter_mut() {
                 *t = false
             }

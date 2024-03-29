@@ -96,8 +96,12 @@ pub fn render(
     q_position_and_renderable
         .iter()
         .for_each(|(position, renderable)| {
-            let tile: FormattedTile = renderable.clone().into();
+            let idx = map.xy_idx(position.x, position.y);
 
-            term.put_char(position.clone(), tile);
+            if map.visible_tiles[idx] {
+                let tile: FormattedTile = renderable.clone().into();
+
+                term.put_char(position.clone(), tile);
+            }
         });
 }

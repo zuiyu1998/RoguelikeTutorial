@@ -1,5 +1,6 @@
 use crate::GameState;
 use bevy::prelude::*;
+use bevy_ascii_terminal::TiledCameraBundle;
 use bevy_asset_loader::prelude::*;
 use bevy_kira_audio::AudioSource;
 
@@ -16,7 +17,17 @@ impl Plugin for LoadingPlugin {
                 .load_collection::<AudioAssets>()
                 .load_collection::<TextureAssets>(),
         );
+
+        app.add_systems(Startup, setup);
     }
+}
+
+pub fn setup(mut commands: Commands) {
+    commands.spawn(
+        TiledCameraBundle::new()
+            .with_pixels_per_tile([8, 8])
+            .with_tile_count([80, 45]),
+    );
 }
 
 // the following asset collections will be loaded during the State `GameState::Loading`

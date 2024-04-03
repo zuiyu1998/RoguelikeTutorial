@@ -2,8 +2,6 @@ use crate::loading::TextureAssets;
 use crate::GameState;
 use bevy::prelude::*;
 
-use bevy_ascii_terminal::TiledCameraBundle;
-
 pub struct MenuPlugin;
 
 /// This plugin is responsible for the game menu (containing only one button...)
@@ -35,12 +33,6 @@ impl Default for ButtonColors {
 struct Menu;
 
 fn setup_menu(mut commands: Commands, textures: Res<TextureAssets>) {
-    info!("menu");
-    commands.spawn(
-        TiledCameraBundle::new()
-            .with_pixels_per_tile([8, 8])
-            .with_tile_count([80, 45]),
-    );
     commands
         .spawn((
             NodeBundle {

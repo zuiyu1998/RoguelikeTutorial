@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy_ascii_terminal::prelude::*;
 
 ///地图上的位置
-#[derive(Component, Debug, Clone, Copy)]
+#[derive(Component, Debug, Clone, Copy, Reflect)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
@@ -44,6 +44,8 @@ pub struct InternalRenderPlugin;
 
 impl Plugin for InternalRenderPlugin {
     fn build(&self, app: &mut App) {
+        app.register_type::<Position>();
+
         app.add_plugins((TerminalPlugin,));
 
         app.add_systems(Update, (render,));

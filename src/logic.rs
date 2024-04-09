@@ -8,6 +8,24 @@ use bevy_ascii_terminal::prelude::*;
 use bracket_pathfinding::prelude::{a_star_search, DistanceAlg, Point};
 use bracket_random::prelude::RandomNumberGenerator;
 
+#[derive(States, Default, Clone, Eq, PartialEq, Debug, Hash)]
+pub enum RunTurnState {
+    #[default]
+    PreRun,
+    //等待输入
+    AwaitingInput,
+    PlayerTurn,
+    MonsterTurn,
+}
+
+pub fn change_to_awaiting_input(mut next_state: ResMut<NextState<RunTurnState>>) {
+    next_state.set(RunTurnState::AwaitingInput);
+}
+
+pub fn change_to_monster_turn(mut next_state: ResMut<NextState<RunTurnState>>) {
+    next_state.set(RunTurnState::MonsterTurn);
+}
+
 #[derive(Resource, Debug, Clone, Reflect, Deref)]
 pub struct PlayerEntity(Entity);
 
@@ -116,27 +134,36 @@ pub struct LogicPlugin;
 
 impl Plugin for LogicPlugin {
     fn build(&self, app: &mut App) {
+        app.init_state::<RunTurnState>();
+
         app.add_systems(
             Update,
-            (user_input, melee_combat, apply_damage, delete_the_dead)
-                .run_if(in_state(GameState::Playing)),
+            (change_to_awaiting_input, monster_ai).run_if(in_state(RunTurnState::MonsterTurn)),
         );
+
         app.add_systems(
-            FixedUpdate,
-            (monster_ai,).run_if(in_state(GameState::Playing)),
+            Update,
+            (change_to_awaiting_input,).run_if(in_state(RunTurnState::PreRun)),
+        );
+
+        app.add_systems(
+            Update,
+            (change_to_monster_turn,).run_if(in_state(RunTurnState::PlayerTurn)),
+        );
+
+        app.add_systems(
+            Update,
+            (user_input,).run_if(in_state(RunTurnState::AwaitingInput)),
+        );
+
+        app.add_systems(
+            Update,
+            (melee_combat, apply_damage, delete_the_dead).run_if(in_state(GameState::Playing)),
         );
 
         app.register_type::<WantsToMelee>();
         app.register_type::<SufferDamage>();
         app.register_type::<CombatStats>();
-
-        let fix_time = Time::<Fixed>::from_hz(2.0);
-
-        if let Some(mut _fix_time) = app.world.get_resource_mut::<Time<Fixed>>() {
-            *_fix_time = fix_time;
-        } else {
-            app.insert_resource(fix_time);
-        }
 
         app.add_systems(OnEnter(GameState::Playing), setup_game);
         app.add_systems(OnExit(GameState::Playing), clear_game);
@@ -244,6 +271,7 @@ pub fn user_input(
     map: Res<Map>,
     q_combat_stats: Query<&mut CombatStats>,
     mut commands: Commands,
+    mut next_state: ResMut<NextState<RunTurnState>>,
 ) {
     let mut x = 0;
     let mut y = 0;
@@ -276,6 +304,10 @@ pub fn user_input(
             &q_combat_stats,
             &mut entity_commands,
         );
+    }
+
+    if x != 0 || y != 0 {
+        next_state.set(RunTurnState::PlayerTurn);
     }
 }
 

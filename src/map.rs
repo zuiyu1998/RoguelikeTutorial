@@ -1,3 +1,4 @@
+use crate::consts::GAME_SIZE;
 use crate::logic::Player;
 use crate::render::{Position, Renderable};
 use bevy::prelude::*;
@@ -173,14 +174,18 @@ impl BaseMap for Map {
 
 impl Default for Map {
     fn default() -> Self {
+        let size = GAME_SIZE[0] * GAME_SIZE[1];
+        let width = GAME_SIZE[0];
+        let height = GAME_SIZE[1];
+
         let map = Map {
-            tiles: vec![TileType::Wall; 80 * 50],
-            width: 80,
-            height: 50,
-            revealed_tiles: vec![false; 80 * 50],
-            visible_tiles: vec![false; 80 * 50],
-            blocked: vec![false; 80 * 50],
-            tile_content: vec![Vec::new(); 80 * 50],
+            tiles: vec![TileType::Wall; size],
+            width,
+            height,
+            revealed_tiles: vec![false; size],
+            visible_tiles: vec![false; size],
+            blocked: vec![false; size],
+            tile_content: vec![Vec::new(); size],
         };
 
         map
@@ -254,8 +259,8 @@ impl Map {
         for _ in 0..MAX_ROOMS {
             let w = rng.range(MIN_SIZE, MAX_SIZE);
             let h = rng.range(MIN_SIZE, MAX_SIZE);
-            let x = rng.roll_dice(1, 80 - w - 1) - 1;
-            let y = rng.roll_dice(1, 50 - h - 1) - 1;
+            let x = rng.roll_dice(1, (GAME_SIZE[0]) as i32 - w - 1) - 1;
+            let y = rng.roll_dice(1, (GAME_SIZE[1]) as i32 - h - 1) - 1;
             let new_room = Rect::new(x, y, w, h);
             let mut ok = true;
             for other_room in rooms.iter() {

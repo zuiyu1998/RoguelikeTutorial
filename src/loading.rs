@@ -1,4 +1,4 @@
-use crate::GameState;
+use crate::{consts::GAME_SIZE, GameState};
 use bevy::prelude::*;
 use bevy_ascii_terminal::TiledCameraBundle;
 use bevy_asset_loader::prelude::*;
@@ -26,7 +26,7 @@ pub fn setup(mut commands: Commands) {
     commands.spawn(
         TiledCameraBundle::new()
             .with_pixels_per_tile([8, 8])
-            .with_tile_count([80, 45]),
+            .with_tile_count([GAME_SIZE[0], GAME_SIZE[1]]),
     );
 }
 

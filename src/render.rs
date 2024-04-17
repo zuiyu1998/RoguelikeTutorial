@@ -2,6 +2,9 @@ use crate::map::Map;
 use bevy::prelude::*;
 use bevy_ascii_terminal::prelude::*;
 
+#[derive(Component)]
+pub struct GameTerminal;
+
 ///地图上的位置
 #[derive(Component, Debug, Clone, Copy, Reflect)]
 pub struct Position {
@@ -54,7 +57,7 @@ impl Plugin for InternalRenderPlugin {
 
 pub fn render(
     q_position_and_renderable: Query<(&Position, &Renderable)>,
-    mut q_render_terminal: Query<&mut Terminal>,
+    mut q_render_terminal: Query<&mut Terminal, With<GameTerminal>>,
     map: Res<Map>,
 ) {
     let mut term = match q_render_terminal.get_single_mut() {

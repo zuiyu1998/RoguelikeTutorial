@@ -2,12 +2,13 @@
 
 mod audio;
 mod common;
+mod consts;
 mod loading;
+mod logic;
 mod map;
 mod menu;
 mod render;
-
-mod logic;
+mod ui;
 
 #[cfg(feature = "dev")]
 mod dev;
@@ -18,6 +19,7 @@ use crate::logic::LogicPlugin;
 use crate::map::MapPlugin;
 use crate::menu::MenuPlugin;
 use crate::render::InternalRenderPlugin;
+use crate::ui::InternalUIPlugin;
 
 use bevy::app::App;
 
@@ -48,6 +50,7 @@ impl Plugin for GamePlugin {
             InternalRenderPlugin,
             LogicPlugin,
             MapPlugin,
+            InternalUIPlugin,
         ));
 
         #[cfg(feature = "dev")]

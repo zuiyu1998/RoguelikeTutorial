@@ -1,10 +1,12 @@
+use crate::consts::{GAME_SIZE, VIEWPORT_SIZE};
 use crate::map::{BlocksTile, Map, Viewshed};
-use crate::render::{Position, Renderable};
+use crate::render::{GameTerminal, Position, Renderable};
+use crate::ui::GameLog;
 use crate::GameState;
 use bevy::ecs::system::EntityCommands;
 use bevy::prelude::*;
 use bevy::utils::hashbrown::HashMap;
-use bevy_ascii_terminal::prelude::*;
+use bevy_ascii_terminal::{prelude::*, ToWorld};
 use bracket_pathfinding::prelude::{a_star_search, DistanceAlg, Point};
 use bracket_random::prelude::RandomNumberGenerator;
 
@@ -52,15 +54,19 @@ pub struct CombatStats {
 
 pub fn delete_the_dead(
     mut commands: Commands,
-    q_combat_stats: Query<(&CombatStats, Entity)>,
+    q_combat_stats: Query<(&CombatStats, Entity, &Name)>,
     player_entity: Res<PlayerEntity>,
     mut next_state: ResMut<NextState<GameState>>,
+    mut next_run_state: ResMut<NextState<RunTurnState>>,
+    mut game_log: ResMut<GameLog>,
 ) {
-    for (combat_stats, entity) in q_combat_stats.iter() {
+    for (combat_stats, entity, name) in q_combat_stats.iter() {
         if combat_stats.hp <= 0 {
             if entity == **player_entity {
                 next_state.set(GameState::Menu);
+                next_run_state.set(RunTurnState::PreRun);
             } else {
+                game_log.entries.push(format!("{} is dead", name));
                 commands.entity(entity).despawn_recursive();
             }
         }
@@ -82,6 +88,7 @@ pub fn melee_combat(
     mut commands: Commands,
     q_wants_to_melee: Query<(&WantsToMelee, &Parent, Entity)>,
     mut q_combat_stats: Query<(&CombatStats, &Name, Option<&mut SufferDamage>)>,
+    mut game_log: ResMut<GameLog>,
 ) {
     let mut damage_map: HashMap<Entity, Vec<i32>> = HashMap::default();
 
@@ -99,8 +106,16 @@ pub fn melee_combat(
         let damage = i32::max(0, active.power - unactive.defense);
 
         if damage == 0 {
-            info!("{} is unable to hurt {}", active_name, unactive_name);
+            game_log.entries.push(format!(
+                "{} is unable to hurt {}",
+                active_name, unactive_name
+            ));
         } else {
+            game_log.entries.push(format!(
+                "{} hits {}, for {} hp.",
+                active_name, unactive_name, damage
+            ));
+
             if let Some(tmp_damages) = damage_map.get_mut(&wants_to_melee.target) {
                 tmp_damages.push(damage)
             } else {
@@ -313,7 +328,7 @@ pub fn user_input(
 
 pub fn clear_game(
     mut commands: Commands,
-    q_terminal: Query<Entity, With<Terminal>>,
+    q_terminal: Query<Entity, With<GameTerminal>>,
     q_position: Query<Entity, With<Position>>,
 ) {
     for entity in q_terminal.iter() {
@@ -328,12 +343,19 @@ pub fn clear_game(
 }
 
 pub fn setup_game(mut commands: Commands, mut map: ResMut<Map>) {
-    let terminal = Terminal::new([80, 50]).with_border(Border::single_line());
+    let terminal = Terminal::new([GAME_SIZE[0], GAME_SIZE[1]]).with_border(Border::single_line());
+
+    let term_y = VIEWPORT_SIZE[1] as i32 / 2 - GAME_SIZE[1] as i32 / 2;
+
+    let mut terminal_bundle = TerminalBundle::from(terminal);
+
+    terminal_bundle = terminal_bundle.with_position([0, term_y]);
 
     commands.spawn((
-        // Spawn the terminal bundle from our terminal
-        TerminalBundle::from(terminal),
-        Name::new("Terminal"),
+        terminal_bundle,
+        Name::new("GameTerminal"),
+        GameTerminal,
+        ToWorld::default(),
     ));
 
     let (map_instance, rooms) = Map::new_map_rooms_and_corridors();

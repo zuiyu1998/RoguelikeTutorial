@@ -417,19 +417,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_ascii_terminal"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d0fbfde86502a61e6857ce1e40e8e091cfc4190397c058445f2a21270e2d1b2"
-dependencies = [
- "arrayvec",
- "bevy",
- "bevy_tiled_camera",
- "bitflags 2.4.2",
- "sark_grids",
-]
-
-[[package]]
 name = "bevy_asset"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1089,16 +1076,6 @@ dependencies = [
  "glyph_brush_layout",
  "serde",
  "thiserror",
-]
-
-[[package]]
-name = "bevy_tiled_camera"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "060087f355e3aece8cdc0052b50195f176fd220671d3292ff196cc76fd86824b"
-dependencies = [
- "bevy",
- "sark_grids",
 ]
 
 [[package]]
@@ -3425,7 +3402,6 @@ name = "roguelike_tutorial"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_ascii_terminal",
  "bevy_asset_loader",
  "bevy_editor_pls",
  "bevy_kira_audio",
@@ -3511,16 +3487,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
-]
-
-[[package]]
-name = "sark_grids"
-version = "0.5.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b9e1548a31ab2cd9f278fbff74fdb344ab027811e16ea82b725278fc7a1d3ae"
-dependencies = [
- "glam",
- "itertools",
 ]
 
 [[package]]

@@ -1,6 +1,5 @@
-use crate::{consts::GAME_SIZE, GameState};
+use crate::GameState;
 use bevy::prelude::*;
-use bevy_ascii_terminal::TiledCameraBundle;
 use bevy_asset_loader::prelude::*;
 use bevy_kira_audio::AudioSource;
 
@@ -23,11 +22,7 @@ impl Plugin for LoadingPlugin {
 }
 
 pub fn setup(mut commands: Commands) {
-    commands.spawn(
-        TiledCameraBundle::new()
-            .with_pixels_per_tile([8, 8])
-            .with_tile_count([GAME_SIZE[0], GAME_SIZE[1]]),
-    );
+    commands.spawn(Camera2dBundle::default());
 }
 
 // the following asset collections will be loaded during the State `GameState::Loading`

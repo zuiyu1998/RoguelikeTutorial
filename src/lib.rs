@@ -4,22 +4,14 @@ mod audio;
 mod common;
 mod consts;
 mod loading;
-mod logic;
-mod map;
 mod menu;
-mod render;
-mod ui;
 
 #[cfg(feature = "dev")]
 mod dev;
 
 use crate::audio::InternalAudioPlugin;
 use crate::loading::LoadingPlugin;
-use crate::logic::LogicPlugin;
-use crate::map::MapPlugin;
 use crate::menu::MenuPlugin;
-use crate::render::InternalRenderPlugin;
-use crate::ui::InternalUIPlugin;
 
 use bevy::app::App;
 
@@ -43,15 +35,8 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.init_state::<GameState>().add_plugins((
-            LoadingPlugin,
-            MenuPlugin,
-            InternalAudioPlugin,
-            InternalRenderPlugin,
-            LogicPlugin,
-            MapPlugin,
-            InternalUIPlugin,
-        ));
+        app.init_state::<GameState>()
+            .add_plugins((LoadingPlugin, MenuPlugin, InternalAudioPlugin));
 
         #[cfg(feature = "dev")]
         {

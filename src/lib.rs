@@ -5,6 +5,7 @@ mod common;
 mod consts;
 mod loading;
 mod logic;
+mod map;
 mod menu;
 mod player;
 mod render;
@@ -16,6 +17,7 @@ use crate::audio::InternalAudioPlugin;
 use crate::common::CommonPlugin;
 use crate::loading::LoadingPlugin;
 use crate::logic::LogicPlugin;
+use crate::map::MapPlugin;
 use crate::menu::MenuPlugin;
 use crate::player::PlayerPlugin;
 
@@ -48,6 +50,7 @@ impl Plugin for GamePlugin {
             LogicPlugin,
             CommonPlugin,
             PlayerPlugin,
+            MapPlugin,
         ));
 
         #[cfg(feature = "dev")]

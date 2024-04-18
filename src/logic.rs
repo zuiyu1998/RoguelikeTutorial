@@ -1,7 +1,7 @@
 use crate::{
     common::Position,
     loading::TextureAssets,
-    map::{new_map, Theme},
+    map::{new_map_rooms_and_corridors, Theme},
     player::Player,
     render::create_sprite_sheet_bundle,
     GameState,
@@ -22,9 +22,9 @@ fn setup_game(
     mut layout_assets: ResMut<Assets<TextureAtlasLayout>>,
     theme: Res<Theme>,
 ) {
-    let map: crate::map::Map = new_map();
+    let (map, rooms) = new_map_rooms_and_corridors();
 
-    map.spawn_tiles(&mut commands, &texture_assets, &mut layout_assets, &theme);
+    let map_entity = map.spawn_tiles(&mut commands, &texture_assets, &mut layout_assets, &theme);
 
     commands.insert_resource(map);
 
@@ -33,6 +33,16 @@ fn setup_game(
         &mut layout_assets,
         theme.player_to_render(),
     );
+    let first = rooms[0].center();
 
-    commands.spawn((sprite_bundle, Position { x: 1, y: 1 }, Player));
+    commands.entity(map_entity).with_children(|builder| {
+        builder.spawn((
+            sprite_bundle,
+            Position {
+                x: first.0,
+                y: first.1,
+            },
+            Player,
+        ));
+    });
 }

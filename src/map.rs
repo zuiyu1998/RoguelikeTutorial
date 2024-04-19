@@ -1,5 +1,6 @@
 use bevy::ecs::system::Resource;
 use bevy::prelude::*;
+use bracket_pathfinding::prelude::{Algorithm2D, BaseMap, Point};
 use bracket_random::prelude::RandomNumberGenerator;
 
 use crate::common::Position;
@@ -45,6 +46,8 @@ impl Plugin for MapPlugin {
 pub trait MapTheme: 'static + Sync + Send {
     fn tile_to_render(&self, tile_type: TileType) -> Glyph;
 
+    fn revealed_tile_to_render(&self, tile_type: TileType) -> Glyph;
+
     fn player_to_render(&self) -> Glyph;
 }
 
@@ -73,6 +76,19 @@ impl MapTheme for DefaultTheme {
         }
     }
 
+    fn revealed_tile_to_render(&self, tile_type: TileType) -> Glyph {
+        match tile_type {
+            TileType::Floor => Glyph {
+                color: Color::rgba(0.529, 0.529, 0.529, 1.0),
+                index: 219,
+            },
+            TileType::Wall => Glyph {
+                color: Color::rgba(0.529, 0.529, 0.529, 1.0),
+                index: '#' as usize,
+            },
+        }
+    }
+
     fn player_to_render(&self) -> Glyph {
         Glyph {
             color: Color::YELLOW,
@@ -95,6 +111,19 @@ pub struct Map {
     pub width: i32,
     pub height: i32,
     pub tiles: Vec<TileType>,
+    pub revealed_tiles: Vec<bool>,
+}
+
+impl Algorithm2D for Map {
+    fn dimensions(&self) -> Point {
+        Point::new(self.width, self.height)
+    }
+}
+
+impl BaseMap for Map {
+    fn is_opaque(&self, idx: usize) -> bool {
+        self.tiles[idx as usize] == TileType::Wall
+    }
 }
 
 pub fn new_map_rooms_and_corridors() -> (Map, Vec<Rect>) {
@@ -195,6 +224,7 @@ impl Map {
             width,
             height,
             tiles,
+            revealed_tiles: vec![false; width_u * height_u],
         };
 
         map

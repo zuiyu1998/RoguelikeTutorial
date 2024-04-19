@@ -6,6 +6,9 @@ use crate::{
     GameState,
 };
 
+#[derive(Resource)]
+pub struct PlayerEntity(pub Entity);
+
 #[derive(Component)]
 pub struct Player;
 

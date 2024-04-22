@@ -6,8 +6,10 @@ use bracket_random::prelude::RandomNumberGenerator;
 use crate::common::Position;
 use crate::consts::{MAP_Z_INDEX, SPRITE_SIZE};
 use crate::loading::TextureAssets;
-use crate::render::{create_sprite_sheet_bundle, Glyph};
+use crate::render::create_sprite_sheet_bundle;
+use crate::theme::Theme;
 
+#[derive(Debug)]
 pub struct Rect {
     pub x1: i32,
     pub x2: i32,
@@ -38,63 +40,7 @@ impl Rect {
 pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<Theme>();
-    }
-}
-
-pub trait MapTheme: 'static + Sync + Send {
-    fn tile_to_render(&self, tile_type: TileType) -> Glyph;
-
-    fn revealed_tile_to_render(&self, tile_type: TileType) -> Glyph;
-
-    fn player_to_render(&self) -> Glyph;
-}
-
-#[derive(Resource, Deref)]
-pub struct Theme(Box<dyn MapTheme>);
-
-impl Default for Theme {
-    fn default() -> Self {
-        Theme(Box::new(DefaultTheme))
-    }
-}
-
-pub struct DefaultTheme;
-
-impl MapTheme for DefaultTheme {
-    fn tile_to_render(&self, tile_type: TileType) -> Glyph {
-        match tile_type {
-            TileType::Floor => Glyph {
-                color: Color::rgba(0.529, 0.529, 0.529, 1.0),
-                index: 219,
-            },
-            TileType::Wall => Glyph {
-                color: Color::rgba(0.0, 1.0, 0.0, 1.0),
-                index: '#' as usize,
-            },
-        }
-    }
-
-    fn revealed_tile_to_render(&self, tile_type: TileType) -> Glyph {
-        match tile_type {
-            TileType::Floor => Glyph {
-                color: Color::rgba(0.529, 0.529, 0.529, 1.0),
-                index: 219,
-            },
-            TileType::Wall => Glyph {
-                color: Color::rgba(0.529, 0.529, 0.529, 1.0),
-                index: '#' as usize,
-            },
-        }
-    }
-
-    fn player_to_render(&self) -> Glyph {
-        Glyph {
-            color: Color::YELLOW,
-            index: 64,
-        }
-    }
+    fn build(&self, _app: &mut App) {}
 }
 
 #[derive(Component)]
@@ -112,6 +58,8 @@ pub struct Map {
     pub height: i32,
     pub tiles: Vec<TileType>,
     pub revealed_tiles: Vec<bool>,
+    pub rooms: Vec<Rect>,
+    pub visible_tiles: Vec<bool>,
 }
 
 impl Algorithm2D for Map {
@@ -126,7 +74,7 @@ impl BaseMap for Map {
     }
 }
 
-pub fn new_map_rooms_and_corridors() -> (Map, Vec<Rect>) {
+pub fn new_map_rooms_and_corridors() -> Map {
     let mut map = Map::default();
 
     let mut rooms: Vec<Rect> = Vec::new();
@@ -167,7 +115,9 @@ pub fn new_map_rooms_and_corridors() -> (Map, Vec<Rect>) {
         }
     }
 
-    (map, rooms)
+    map.rooms = rooms;
+
+    map
 }
 
 impl Map {
@@ -225,6 +175,8 @@ impl Map {
             height,
             tiles,
             revealed_tiles: vec![false; width_u * height_u],
+            rooms: vec![],
+            visible_tiles: vec![false; width_u * height_u],
         };
 
         map

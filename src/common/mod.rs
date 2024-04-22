@@ -1,7 +1,8 @@
 use crate::{
     consts::SPRITE_SIZE,
-    map::{Map, MapTile, Theme},
-    player::{Player, PlayerEntity},
+    map::{Map, MapTile},
+    player::PlayerEntity,
+    theme::Theme,
     GameState,
 };
 use bevy::prelude::*;
@@ -22,35 +23,32 @@ pub struct Position {
 }
 
 fn update_visibility(
-    q_player: Query<&Viewshed, With<Player>>,
-    mut q_tiles: Query<(&mut Visibility, &Position, &mut Sprite), With<MapTile>>,
+    mut q_position: Query<(&mut Visibility, &Position, &mut Sprite, Entity)>,
+    q_tiles: Query<&MapTile>,
     map: Res<Map>,
     theme: Res<Theme>,
 ) {
-    for viewshed in q_player.iter() {
-        for (mut visibility, pos, mut sprite) in q_tiles.iter_mut() {
-            if viewshed.visible_tiles.contains(&Point::new(pos.x, pos.y)) {
-                *visibility = Visibility::Visible;
+    for (mut visibility, pos, mut sprite, entity) in q_position.iter_mut() {
+        let idx = map.xy_idx(pos.x, pos.y);
 
-                let idx = map.xy_idx(pos.x, pos.y);
+        if map.visible_tiles[idx] {
+            *visibility = Visibility::Visible;
+
+            if q_tiles.get(entity).is_ok() {
+                let tile = map.tiles[idx];
+                let glyph = theme.tile_to_render(tile);
+                sprite.color = glyph.color;
+            }
+        } else {
+            if q_tiles.get(entity).is_ok() && map.revealed_tiles[idx] {
+                *visibility = Visibility::Visible;
 
                 let tile = map.tiles[idx];
 
-                let glyph = theme.tile_to_render(tile);
+                let glyph = theme.revealed_tile_to_render(tile);
                 sprite.color = glyph.color;
             } else {
-                let idx = map.xy_idx(pos.x, pos.y);
-
-                if map.revealed_tiles[idx] {
-                    *visibility = Visibility::Visible;
-
-                    let tile = map.tiles[idx];
-
-                    let glyph = theme.revealed_tile_to_render(tile);
-                    sprite.color = glyph.color;
-                } else {
-                    *visibility = Visibility::Hidden;
-                }
+                *visibility = Visibility::Hidden;
             }
         }
     }
@@ -73,10 +71,15 @@ fn update_viewshed(
             .retain(|p| p.x >= 0 && p.x < map.width && p.y >= 0 && p.y < map.height);
 
         if entity == player_entity.0 {
+            for t in map.visible_tiles.iter_mut() {
+                *t = false
+            }
+
             for point in viewshed.visible_tiles.iter() {
                 let idx = map.xy_idx(point.x, point.y);
 
                 map.revealed_tiles[idx] = true;
+                map.visible_tiles[idx] = true;
             }
         }
     }

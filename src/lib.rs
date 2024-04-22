@@ -3,23 +3,27 @@
 mod audio;
 mod common;
 mod consts;
+mod enemy;
 mod loading;
 mod logic;
 mod map;
 mod menu;
 mod player;
 mod render;
+mod theme;
 
 #[cfg(feature = "dev")]
 mod dev;
 
 use crate::audio::InternalAudioPlugin;
 use crate::common::CommonPlugin;
+use crate::enemy::EnemyPlugin;
 use crate::loading::LoadingPlugin;
 use crate::logic::LogicPlugin;
 use crate::map::MapPlugin;
 use crate::menu::MenuPlugin;
 use crate::player::PlayerPlugin;
+use crate::theme::ThemePlugin;
 
 use bevy::app::App;
 
@@ -51,6 +55,8 @@ impl Plugin for GamePlugin {
             CommonPlugin,
             PlayerPlugin,
             MapPlugin,
+            ThemePlugin,
+            EnemyPlugin,
         ));
 
         #[cfg(feature = "dev")]

@@ -1,10 +1,14 @@
 use bevy::prelude::*;
+use bracket_pathfinding::prelude::Point;
 
 use crate::{
     common::Position,
     map::{Map, TileType},
     GameState,
 };
+
+#[derive(Resource)]
+pub struct PlayerPosition(pub Point);
 
 #[derive(Resource)]
 pub struct PlayerEntity(pub Entity);
@@ -45,6 +49,7 @@ fn get_input(keyboard_input: &ButtonInput<KeyCode>) -> Vec2 {
 pub fn player_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut q_player: Query<&mut Position, With<Player>>,
+    mut player_position: ResMut<PlayerPosition>,
     map: Res<Map>,
 ) {
     let mut pos = match q_player.get_single_mut() {
@@ -65,4 +70,6 @@ pub fn player_input(
 
     pos.x = new_pos_x;
     pos.y = new_pos_y;
+
+    player_position.0 = Point::new(new_pos_x, new_pos_y);
 }

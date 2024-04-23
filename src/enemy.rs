@@ -3,9 +3,9 @@ use bracket_pathfinding::prelude::{a_star_search, DistanceAlg, Point};
 
 use crate::{
     common::{Position, Viewshed, WantsToMelee},
+    logic::RunTurnState,
     map::Map,
     player::{PlayerEntity, PlayerPosition},
-    GameState,
 };
 
 fn enemy_ai(
@@ -57,16 +57,8 @@ impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             FixedUpdate,
-            (enemy_ai,).run_if(in_state(GameState::Playing)),
+            (enemy_ai,).run_if(in_state(RunTurnState::MonsterTurn)),
         );
-
-        let fix_time = Time::<Fixed>::from_hz(2.0);
-
-        if let Some(mut _fix_time) = app.world.get_resource_mut::<Time<Fixed>>() {
-            *_fix_time = fix_time;
-        } else {
-            app.insert_resource(fix_time);
-        }
     }
 }
 

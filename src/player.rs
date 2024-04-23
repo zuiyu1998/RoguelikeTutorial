@@ -1,8 +1,9 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::petgraph::matrix_graph::Zero};
 use bracket_pathfinding::prelude::Point;
 
 use crate::{
     common::{CombatStats, Position, WantsToMelee},
+    logic::RunTurnState,
     map::Map,
     GameState,
 };
@@ -54,6 +55,7 @@ pub fn player_input(
     map: Res<Map>,
     q_combat_stats: Query<&mut CombatStats>,
     mut commands: Commands,
+    mut run_turn_ns: ResMut<NextState<RunTurnState>>,
 ) {
     let mut pos = match q_player.get_single_mut() {
         Ok(pos) => pos,
@@ -96,4 +98,8 @@ pub fn player_input(
     pos.y = new_pos_y;
 
     player_position.0 = Point::new(new_pos_x, new_pos_y);
+
+    if !input.x.is_zero() {
+        run_turn_ns.set(RunTurnState::PlayerTurn);
+    }
 }

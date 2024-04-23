@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use bracket_pathfinding::prelude::Point;
 
 use crate::{
-    common::Position,
-    map::{Map, TileType},
+    common::{CombatStats, Position, WantsToMelee},
+    map::Map,
     GameState,
 };
 
@@ -50,7 +50,10 @@ pub fn player_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut q_player: Query<&mut Position, With<Player>>,
     mut player_position: ResMut<PlayerPosition>,
+    player_entity: Res<PlayerEntity>,
     map: Res<Map>,
+    q_combat_stats: Query<&mut CombatStats>,
+    mut commands: Commands,
 ) {
     let mut pos = match q_player.get_single_mut() {
         Ok(pos) => pos,
@@ -64,7 +67,28 @@ pub fn player_input(
 
     let index = map.xy_idx(new_pos_x, new_pos_y);
 
-    if map.tiles[index] == TileType::Wall {
+    for potential_target in map.tile_content[index].iter() {
+        let target = q_combat_stats.get(*potential_target);
+        match target {
+            Err(_e) => {
+                error!("tile content index error,entity is :{:?}", potential_target);
+            }
+            Ok(_t) => {
+                // Attack it
+                info!("From Hell's Heart, I stab thee!");
+
+                let entity = *potential_target;
+                //生成子实体添加攻击组件
+                commands.entity(player_entity.0).with_children(|parent| {
+                    parent.spawn(WantsToMelee { target: entity });
+                });
+
+                return; // So we don't move after attacking
+            }
+        }
+    }
+
+    if map.blocked[index] {
         return;
     }
 

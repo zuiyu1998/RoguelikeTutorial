@@ -1,9 +1,9 @@
 use crate::{
-    common::{Position, Viewshed},
+    common::{CombatStats, Position, Viewshed},
     consts::{ENEMY_Z_INDEX, PLAYER_Z_INDEX},
     enemy::{Enemy, EnemyType},
     loading::TextureAssets,
-    map::new_map_rooms_and_corridors,
+    map::{new_map_rooms_and_corridors, BlocksTile, MapEntity},
     player::{Player, PlayerEntity, PlayerPosition},
     render::create_sprite_sheet_bundle,
     theme::Theme,
@@ -17,7 +17,17 @@ pub struct LogicPlugin;
 impl Plugin for LogicPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Playing), (setup_game,));
+
+        app.add_systems(OnExit(GameState::Playing), clear_game);
     }
+}
+
+pub fn clear_game(mut commands: Commands, map_entity: Res<MapEntity>) {
+    commands.entity(map_entity.0).despawn_recursive();
+
+    commands.remove_resource::<PlayerEntity>();
+    commands.remove_resource::<PlayerPosition>();
+    commands.remove_resource::<MapEntity>();
 }
 
 fn setup_game(
@@ -26,7 +36,9 @@ fn setup_game(
     mut layout_assets: ResMut<Assets<TextureAtlasLayout>>,
     theme: Res<Theme>,
 ) {
-    let map = new_map_rooms_and_corridors();
+    let mut map = new_map_rooms_and_corridors();
+
+    map.populate_blocked();
 
     let map_entity = map.spawn_tiles(&mut commands, &texture_assets, &mut layout_assets, &theme);
 
@@ -54,6 +66,12 @@ fn setup_game(
                 dirty: true,
             },
             Name::new("Player"),
+            CombatStats {
+                max_hp: 30,
+                hp: 30,
+                defense: 2,
+                power: 5,
+            },
         ))
         .id();
 
@@ -98,11 +116,19 @@ fn setup_game(
                     dirty: true,
                 },
                 Name::new(format!("{} #{}", &name, i)),
+                BlocksTile,
+                CombatStats {
+                    max_hp: 16,
+                    hp: 16,
+                    defense: 1,
+                    power: 3,
+                },
             ))
             .id();
 
         commands.entity(enemy).set_parent(map_entity);
     }
 
+    commands.insert_resource(MapEntity(map_entity));
     commands.insert_resource(map);
 }

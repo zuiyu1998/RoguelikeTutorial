@@ -5,8 +5,28 @@ use crate::{
     theme::Theme,
     GameState,
 };
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::hashbrown::HashMap};
 use bracket_pathfinding::prelude::{field_of_view, Point};
+
+#[derive(Component, Debug)]
+pub struct CombatStats {
+    pub max_hp: i32,
+    pub hp: i32,
+    pub defense: i32,
+    pub power: i32,
+}
+
+#[derive(Component, Debug, Clone, Reflect)]
+#[reflect(Component)]
+pub struct WantsToMelee {
+    pub target: Entity,
+}
+
+#[derive(Component, Debug, Reflect)]
+#[reflect(Component)]
+pub struct SufferDamage {
+    pub amount: Vec<i32>,
+}
 
 #[derive(Component)]
 pub struct Viewshed {
@@ -20,6 +40,80 @@ pub struct Viewshed {
 pub struct Position {
     pub x: i32,
     pub y: i32,
+}
+
+pub fn delete_the_dead(
+    mut commands: Commands,
+    q_combat_stats: Query<(&CombatStats, Entity)>,
+    player_entity: Res<PlayerEntity>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    for (combat_stats, entity) in q_combat_stats.iter() {
+        if combat_stats.hp <= 0 {
+            if entity == player_entity.0 {
+                next_state.set(GameState::Menu);
+            } else {
+                commands.entity(entity).despawn_recursive();
+            }
+        }
+    }
+}
+
+pub fn apply_damage(
+    mut commands: Commands,
+    mut q_suffer_damage: Query<(&mut CombatStats, &SufferDamage, Entity)>,
+) {
+    for (mut stats, damage, entity) in q_suffer_damage.iter_mut() {
+        stats.hp -= damage.amount.iter().sum::<i32>();
+
+        commands.entity(entity).remove::<SufferDamage>();
+    }
+}
+
+pub fn melee_combat(
+    mut commands: Commands,
+    q_wants_to_melee: Query<(&WantsToMelee, &Parent, Entity)>,
+    mut q_combat_stats: Query<(&CombatStats, &Name, Option<&mut SufferDamage>)>,
+) {
+    let mut damage_map: HashMap<Entity, Vec<i32>> = HashMap::default();
+
+    for (wants_to_melee, parent, entity) in q_wants_to_melee.iter() {
+        let (active, active_name, _) = q_combat_stats.get(parent.get()).unwrap();
+        if active.hp < 0 {
+            continue;
+        }
+
+        let (unactive, unactive_name, _) = q_combat_stats.get(wants_to_melee.target).unwrap();
+        if unactive.hp < 0 {
+            continue;
+        }
+
+        let damage = i32::max(0, active.power - unactive.defense);
+
+        if damage == 0 {
+            info!("{} is unable to hurt {}", active_name, unactive_name);
+        } else {
+            if let Some(tmp_damages) = damage_map.get_mut(&wants_to_melee.target) {
+                tmp_damages.push(damage)
+            } else {
+                damage_map.insert(wants_to_melee.target, vec![damage]);
+            }
+        }
+
+        commands.entity(entity).despawn_recursive();
+    }
+
+    for (entity, damages) in damage_map.into_iter() {
+        let (_, _, suffer_damage) = q_combat_stats.get_mut(entity).unwrap();
+
+        if let Some(mut suffer_damage) = suffer_damage {
+            suffer_damage.amount.extend_from_slice(&damages);
+        } else {
+            commands
+                .entity(entity)
+                .insert(SufferDamage { amount: damages });
+        }
+    }
 }
 
 fn update_visibility(
@@ -101,10 +195,19 @@ pub struct CommonPlugin;
 impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Position>();
+        app.register_type::<WantsToMelee>();
+        app.register_type::<SufferDamage>();
 
         app.add_systems(
             Update,
-            (keep_position, update_viewshed, update_visibility)
+            (
+                keep_position,
+                update_viewshed,
+                update_visibility,
+                melee_combat,
+                apply_damage,
+                delete_the_dead,
+            )
                 .run_if(in_state(GameState::Playing)),
         );
     }

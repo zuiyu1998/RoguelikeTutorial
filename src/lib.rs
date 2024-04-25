@@ -11,6 +11,7 @@ mod menu;
 mod player;
 mod render;
 mod theme;
+mod ui;
 
 #[cfg(feature = "dev")]
 mod dev;
@@ -24,6 +25,7 @@ use crate::map::MapPlugin;
 use crate::menu::MenuPlugin;
 use crate::player::PlayerPlugin;
 use crate::theme::ThemePlugin;
+use crate::ui::InternalUiPlugin;
 
 use bevy::app::App;
 
@@ -57,6 +59,7 @@ impl Plugin for GamePlugin {
             MapPlugin,
             ThemePlugin,
             EnemyPlugin,
+            InternalUiPlugin,
         ));
 
         #[cfg(feature = "dev")]

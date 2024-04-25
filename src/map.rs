@@ -15,6 +15,9 @@ use crate::GameState;
 #[derive(Resource, Deref)]
 pub struct MapEntity(pub Entity);
 
+#[derive(Component)]
+pub struct MapInstance;
+
 #[derive(Debug)]
 pub struct Rect {
     pub x1: i32,
@@ -298,6 +301,7 @@ impl Map {
                     ..Default::default()
                 },
                 VisibilityBundle::default(),
+                MapInstance,
             ))
             .id();
         let mut map_commands = commands.entity(map_entity);

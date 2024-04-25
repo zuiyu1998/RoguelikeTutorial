@@ -1,5 +1,5 @@
 use crate::{
-    common::{CombatStats, Position, Viewshed},
+    common::{CombatStats, GameLog, Position, Viewshed},
     consts::{ENEMY_Z_INDEX, PLAYER_Z_INDEX},
     enemy::{Enemy, EnemyType},
     loading::TextureAssets,
@@ -22,8 +22,13 @@ pub enum RunTurnState {
     MonsterTurn,
 }
 
-pub fn change_to_awaiting_input(mut next_state: ResMut<NextState<RunTurnState>>) {
-    next_state.set(RunTurnState::AwaitingInput);
+pub fn change_to_awaiting_input(
+    mut next_state: ResMut<NextState<RunTurnState>>,
+    game_ns: Res<State<GameState>>,
+) {
+    if *game_ns == GameState::Playing {
+        next_state.set(RunTurnState::AwaitingInput);
+    }
 }
 
 pub fn change_to_monster_turn(mut next_state: ResMut<NextState<RunTurnState>>) {
@@ -63,6 +68,7 @@ pub fn clear_game(mut commands: Commands, map_entity: Res<MapEntity>) {
     commands.remove_resource::<PlayerEntity>();
     commands.remove_resource::<PlayerPosition>();
     commands.remove_resource::<MapEntity>();
+    commands.remove_resource::<GameLog>();
 }
 
 fn setup_game(
@@ -166,4 +172,5 @@ fn setup_game(
 
     commands.insert_resource(MapEntity(map_entity));
     commands.insert_resource(map);
+    commands.insert_resource(GameLog::default());
 }

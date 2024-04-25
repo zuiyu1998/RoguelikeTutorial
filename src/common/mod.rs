@@ -8,6 +8,11 @@ use crate::{
 use bevy::{prelude::*, utils::hashbrown::HashMap};
 use bracket_pathfinding::prelude::{field_of_view, Point};
 
+#[derive(Resource, Default)]
+pub struct GameLog {
+    pub entries: Vec<String>,
+}
+
 #[derive(Component, Debug)]
 pub struct CombatStats {
     pub max_hp: i32,
@@ -35,7 +40,7 @@ pub struct Viewshed {
     pub dirty: bool,
 }
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, PartialEq, Eq, Debug)]
 #[reflect(Component)]
 pub struct Position {
     pub x: i32,
@@ -44,16 +49,19 @@ pub struct Position {
 
 pub fn delete_the_dead(
     mut commands: Commands,
-    q_combat_stats: Query<(&CombatStats, Entity)>,
+    q_combat_stats: Query<(&CombatStats, Entity, &Name)>,
     player_entity: Res<PlayerEntity>,
     mut next_state: ResMut<NextState<GameState>>,
+    mut log: ResMut<GameLog>,
 ) {
-    for (combat_stats, entity) in q_combat_stats.iter() {
+    for (combat_stats, entity, name) in q_combat_stats.iter() {
         if combat_stats.hp <= 0 {
             if entity == player_entity.0 {
                 next_state.set(GameState::Menu);
             } else {
                 commands.entity(entity).despawn_recursive();
+
+                log.entries.push(format!("{} is dead", &name));
             }
         }
     }
@@ -74,6 +82,7 @@ pub fn melee_combat(
     mut commands: Commands,
     q_wants_to_melee: Query<(&WantsToMelee, &Parent, Entity)>,
     mut q_combat_stats: Query<(&CombatStats, &Name, Option<&mut SufferDamage>)>,
+    mut log: ResMut<GameLog>,
 ) {
     let mut damage_map: HashMap<Entity, Vec<i32>> = HashMap::default();
 
@@ -91,8 +100,16 @@ pub fn melee_combat(
         let damage = i32::max(0, active.power - unactive.defense);
 
         if damage == 0 {
-            info!("{} is unable to hurt {}", active_name, unactive_name);
+            log.entries.push(format!(
+                "{} is unable to hurt {}",
+                active_name, unactive_name
+            ))
         } else {
+            log.entries.push(format!(
+                "{} hits {}, for {} hp.",
+                &active_name, &unactive_name, damage
+            ));
+
             if let Some(tmp_damages) = damage_map.get_mut(&wants_to_melee.target) {
                 tmp_damages.push(damage)
             } else {

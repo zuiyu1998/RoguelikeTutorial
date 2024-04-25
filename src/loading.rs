@@ -1,9 +1,12 @@
-use crate::GameState;
+use crate::{ui::FontManager, GameState};
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_kira_audio::AudioSource;
 
 pub struct LoadingPlugin;
+
+#[derive(Component)]
+pub struct MainCamera;
 
 /// This plugin loads all assets using [`AssetLoader`] from a third party bevy plugin
 /// Alternatively you can write the logic to load assets yourself
@@ -14,7 +17,8 @@ impl Plugin for LoadingPlugin {
             LoadingState::new(GameState::Loading)
                 .continue_to_state(GameState::Menu)
                 .load_collection::<AudioAssets>()
-                .load_collection::<TextureAssets>(),
+                .load_collection::<TextureAssets>()
+                .load_collection::<FontManager>(),
         );
 
         app.add_systems(Startup, setup);
@@ -22,7 +26,7 @@ impl Plugin for LoadingPlugin {
 }
 
 pub fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2dBundle::default(), MainCamera));
 }
 
 // the following asset collections will be loaded during the State `GameState::Loading`

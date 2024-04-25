@@ -34,6 +34,7 @@ strip = true
 [features]
 default = ['dev']
 dev = ["bevy/dynamic_linking", "bevy_editor_pls"]
+dev_not_editor = []
 
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
 #   and android_shared_stdcxx, since that is covered in `mobile`

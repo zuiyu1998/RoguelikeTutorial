@@ -1,4 +1,4 @@
-use crate::{enemy::EnemyType, map::TileType, render::Glyph};
+use crate::{enemy::EnemyType, item::ItemType, map::TileType, render::Glyph};
 use bevy::prelude::*;
 
 pub struct ThemePlugin;
@@ -11,6 +11,7 @@ impl Plugin for ThemePlugin {
 
 pub trait MapTheme: 'static + Sync + Send {
     fn tile_to_render(&self, tile_type: TileType) -> Glyph;
+    fn item_to_render(&self, tile_type: ItemType) -> Glyph;
 
     fn revealed_tile_to_render(&self, tile_type: TileType) -> Glyph;
 
@@ -44,6 +45,15 @@ impl MapTheme for DefaultTheme {
         }
     }
 
+    fn item_to_render(&self, item_type: ItemType) -> Glyph {
+        match item_type {
+            ItemType::HealthPotion => Glyph {
+                color: Color::PURPLE,
+                index: '¡' as usize,
+            },
+        }
+    }
+
     fn revealed_tile_to_render(&self, tile_type: TileType) -> Glyph {
         match tile_type {
             TileType::Floor => Glyph {
@@ -69,6 +79,10 @@ impl MapTheme for DefaultTheme {
             EnemyType::G => Glyph {
                 color: Color::RED,
                 index: 'G' as usize,
+            },
+            EnemyType::O => Glyph {
+                color: Color::RED,
+                index: 'O' as usize,
             },
         }
     }

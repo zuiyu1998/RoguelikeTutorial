@@ -4,12 +4,14 @@ mod audio;
 mod common;
 mod consts;
 mod enemy;
+mod item;
 mod loading;
 mod logic;
 mod map;
 mod menu;
 mod player;
 mod render;
+mod spawner;
 mod theme;
 mod ui;
 
@@ -19,6 +21,7 @@ mod dev;
 use crate::audio::InternalAudioPlugin;
 use crate::common::CommonPlugin;
 use crate::enemy::EnemyPlugin;
+use crate::item::ItemPlugin;
 use crate::loading::LoadingPlugin;
 use crate::logic::LogicPlugin;
 use crate::map::MapPlugin;
@@ -60,6 +63,7 @@ impl Plugin for GamePlugin {
             ThemePlugin,
             EnemyPlugin,
             InternalUiPlugin,
+            ItemPlugin,
         ));
 
         #[cfg(feature = "dev")]

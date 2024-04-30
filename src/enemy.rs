@@ -56,7 +56,7 @@ pub struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
-            FixedUpdate,
+            Update,
             (enemy_ai,).run_if(in_state(RunTurnState::MonsterTurn)),
         );
     }
@@ -64,6 +64,7 @@ impl Plugin for EnemyPlugin {
 
 pub enum EnemyType {
     G,
+    O,
 }
 
 #[derive(Debug, Component)]

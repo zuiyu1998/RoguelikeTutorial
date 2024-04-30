@@ -7,6 +7,7 @@ use bracket_random::prelude::RandomNumberGenerator;
 use crate::common::Position;
 use crate::consts::{MAP_Z_INDEX, SPRITE_SIZE};
 use crate::enemy::Enemy;
+use crate::item::Item;
 use crate::loading::TextureAssets;
 use crate::render::create_sprite_sheet_bundle;
 use crate::theme::Theme;
@@ -55,20 +56,26 @@ impl Plugin for MapPlugin {
 }
 
 pub fn map_index(
-    q_position: Query<(&Position, Entity), With<Enemy>>,
-    q_blocks: Query<Entity, With<BlocksTile>>,
+    q_position: Query<Entity, With<Enemy>>,
+    q_blocks: Query<(&Position, Entity), With<BlocksTile>>,
+    q_items: Query<(&Position, Entity), With<Item>>,
     mut map: ResMut<Map>,
 ) {
-    map.populate_blocked();
+    map.populate();
     map.clear_content_index();
 
-    for (pos, entity) in q_position.iter() {
+    for (pos, entity) in q_blocks.iter() {
         let idx = map.xy_idx(pos.x, pos.y);
+        map.blocked[idx] = true;
 
-        if let Ok(_) = q_blocks.get(entity) {
-            map.blocked[idx] = true;
+        if let Ok(_) = q_position.get(entity) {
             map.tile_content[idx].push(entity);
         }
+    }
+
+    for (pos, entity) in q_items.iter() {
+        let idx = map.xy_idx(pos.x, pos.y);
+        map.items[idx] = Some(entity);
     }
 }
 
@@ -94,6 +101,7 @@ pub struct Map {
     pub visible_tiles: Vec<bool>,
     pub blocked: Vec<bool>,
     pub tile_content: Vec<Vec<Entity>>,
+    pub items: Vec<Option<Entity>>,
 }
 
 impl Algorithm2D for Map {
@@ -205,10 +213,10 @@ impl Map {
         }
     }
 
-    //将地图中block信息记录在blocked中
-    pub fn populate_blocked(&mut self) {
+    pub fn populate(&mut self) {
         for (i, tile) in self.tiles.iter_mut().enumerate() {
             self.blocked[i] = *tile == TileType::Wall;
+            self.items[i] = None;
         }
     }
 
@@ -278,6 +286,7 @@ impl Map {
             visible_tiles: vec![false; width_u * height_u],
             blocked: vec![false; width_u * height_u],
             tile_content: vec![vec![]; width_u * height_u],
+            items: vec![None; width_u * height_u],
         };
 
         map
@@ -304,6 +313,7 @@ impl Map {
                 MapInstance,
             ))
             .id();
+
         let mut map_commands = commands.entity(map_entity);
 
         for x in 0..self.width {

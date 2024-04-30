@@ -7,6 +7,10 @@ use crate::{
 };
 use bevy::{prelude::*, utils::hashbrown::HashMap};
 use bracket_pathfinding::prelude::{field_of_view, Point};
+use bracket_random::prelude::RandomNumberGenerator as BracketRandomNumberGenerator;
+
+#[derive(Resource, Deref, DerefMut)]
+pub struct RandomNumberGenerator(BracketRandomNumberGenerator);
 
 #[derive(Resource, Default)]
 pub struct GameLog {
@@ -214,6 +218,7 @@ impl Plugin for CommonPlugin {
         app.register_type::<Position>();
         app.register_type::<WantsToMelee>();
         app.register_type::<SufferDamage>();
+        app.insert_resource(RandomNumberGenerator(BracketRandomNumberGenerator::new()));
 
         app.add_systems(
             Update,

@@ -1,12 +1,8 @@
 use crate::{
-    common::{CombatStats, GameLog, Position, Viewshed},
-    consts::{ENEMY_Z_INDEX, PLAYER_Z_INDEX},
-    enemy::{Enemy, EnemyType},
-    loading::TextureAssets,
-    map::{new_map_rooms_and_corridors, BlocksTile, MapEntity},
-    player::{Player, PlayerEntity, PlayerPosition},
-    render::create_sprite_sheet_bundle,
-    theme::Theme,
+    common::{GameLog, RandomNumberGenerator},
+    map::{new_map_rooms_and_corridors, MapEntity},
+    player::{PlayerEntity, PlayerPosition},
+    spawner::{self, spawn_room, ThemeContext},
     GameState,
 };
 use bevy::prelude::*;
@@ -73,48 +69,21 @@ pub fn clear_game(mut commands: Commands, map_entity: Res<MapEntity>) {
 
 fn setup_game(
     mut commands: Commands,
-    texture_assets: Res<TextureAssets>,
-    mut layout_assets: ResMut<Assets<TextureAtlasLayout>>,
-    theme: Res<Theme>,
+    mut theme_context: ThemeContext,
+    mut rng: ResMut<RandomNumberGenerator>,
 ) {
-    let mut map = new_map_rooms_and_corridors();
+    let map = new_map_rooms_and_corridors();
 
-    map.populate_blocked();
-
-    let map_entity = map.spawn_tiles(&mut commands, &texture_assets, &mut layout_assets, &theme);
-
-    let mut sprite_bundle = create_sprite_sheet_bundle(
-        &texture_assets,
-        &mut layout_assets,
-        theme.player_to_render(),
+    let map_entity = map.spawn_tiles(
+        &mut commands,
+        &theme_context.texture_assets,
+        &mut theme_context.layout_assets,
+        &theme_context.theme,
     );
-
-    sprite_bundle.transform.translation.z = PLAYER_Z_INDEX;
 
     let first = map.rooms[0].center();
 
-    let player = commands
-        .spawn((
-            sprite_bundle,
-            Position {
-                x: first.0,
-                y: first.1,
-            },
-            Player,
-            Viewshed {
-                range: 9,
-                visible_tiles: vec![],
-                dirty: true,
-            },
-            Name::new("Player"),
-            CombatStats {
-                max_hp: 30,
-                hp: 30,
-                defense: 2,
-                power: 5,
-            },
-        ))
-        .id();
+    let player = spawner::player(&mut commands, &mut theme_context, first.0, first.1);
 
     commands.entity(player).set_parent(map_entity);
 
@@ -123,51 +92,16 @@ fn setup_game(
     commands.insert_resource(PlayerEntity(player));
 
     for (i, room) in map.rooms.iter().skip(1).enumerate() {
-        let enemy_tile = EnemyType::G;
-
-        let name;
-
-        match enemy_tile {
-            EnemyType::G => {
-                name = "Goblin".to_string();
-            }
-        }
-
-        let enemy_pos = room.center();
-
-        let mut sprite_bundle = create_sprite_sheet_bundle(
-            &texture_assets,
-            &mut layout_assets,
-            theme.enemy_to_render(enemy_tile),
-        );
-
-        sprite_bundle.transform.translation.z = ENEMY_Z_INDEX;
-
-        let enemy = commands
-            .spawn((
-                sprite_bundle,
-                Position {
-                    x: enemy_pos.0,
-                    y: enemy_pos.1,
-                },
-                Enemy,
-                Viewshed {
-                    range: 9,
-                    visible_tiles: vec![],
-                    dirty: true,
-                },
-                Name::new(format!("{} #{}", &name, i)),
-                BlocksTile,
-                CombatStats {
-                    max_hp: 16,
-                    hp: 16,
-                    defense: 1,
-                    power: 3,
-                },
-            ))
-            .id();
-
-        commands.entity(enemy).set_parent(map_entity);
+        spawn_room(
+            &mut commands,
+            &mut theme_context,
+            map_entity,
+            &mut rng,
+            room,
+            i,
+            4,
+            4,
+        )
     }
 
     commands.insert_resource(MapEntity(map_entity));

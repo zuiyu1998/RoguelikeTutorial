@@ -3,6 +3,7 @@ use bracket_pathfinding::prelude::Point;
 
 use crate::{
     common::{CombatStats, Position, WantsToMelee},
+    item::WantsToPickupItem,
     logic::RunTurnState,
     map::Map,
     GameState,
@@ -92,6 +93,14 @@ pub fn player_input(
 
     if map.blocked[index] {
         return;
+    }
+    if let Some(item_entity) = map.items[index] {
+        commands.entity(player_entity.0).with_children(|parent| {
+            parent.spawn(WantsToPickupItem {
+                collected_by: player_entity.0,
+                item: item_entity,
+            });
+        });
     }
 
     pos.x = new_pos_x;

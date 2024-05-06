@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 
-use crate::{common::Position, GameState};
+use crate::{common::Position, AppState};
 
 pub struct ItemPlugin;
 
 impl Plugin for ItemPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, item_collect.run_if(in_state(GameState::Playing)));
+        app.add_systems(Update, item_collect.run_if(in_state(AppState::InGame)));
     }
 }
 

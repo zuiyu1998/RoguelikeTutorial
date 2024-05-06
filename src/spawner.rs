@@ -12,7 +12,7 @@ use bevy::{
 use crate::{
     common::{CombatStats, Position, RandomNumberGenerator, Viewshed},
     consts::{ENEMY_Z_INDEX, ITEM_Z_INDEX, PLAYER_Z_INDEX},
-    enemy::{Enemy, EnemyType},
+    enemy::{add_state_machine, Enemy, EnemyType},
     item::{Item, ItemType, Potion},
     loading::TextureAssets,
     map::{BlocksTile, Rect},
@@ -177,6 +177,8 @@ pub fn enemy(
             },
         ))
         .id();
+
+    add_state_machine(&mut commands.entity(monster), enemy_tile);
 
     monster
 }

@@ -1,13 +1,18 @@
+mod state_machine;
+
 use crate::{
     consts::SPRITE_SIZE,
     map::{Map, MapTile},
     player::PlayerEntity,
+    state::AppStateManager,
     theme::Theme,
-    GameState,
+    AppState,
 };
 use bevy::{prelude::*, utils::hashbrown::HashMap};
 use bracket_pathfinding::prelude::{field_of_view, Point};
 use bracket_random::prelude::RandomNumberGenerator as BracketRandomNumberGenerator;
+
+pub use state_machine::*;
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct RandomNumberGenerator(BracketRandomNumberGenerator);
@@ -27,12 +32,14 @@ pub struct CombatStats {
 
 #[derive(Component, Debug, Clone, Reflect)]
 #[reflect(Component)]
+#[component(storage = "SparseSet")]
 pub struct WantsToMelee {
     pub target: Entity,
 }
 
 #[derive(Component, Debug, Reflect)]
 #[reflect(Component)]
+#[component(storage = "SparseSet")]
 pub struct SufferDamage {
     pub amount: Vec<i32>,
 }
@@ -55,13 +62,13 @@ pub fn delete_the_dead(
     mut commands: Commands,
     q_combat_stats: Query<(&CombatStats, Entity, &Name)>,
     player_entity: Res<PlayerEntity>,
-    mut next_state: ResMut<NextState<GameState>>,
     mut log: ResMut<GameLog>,
+    mut app_state_manager: AppStateManager,
 ) {
     for (combat_stats, entity, name) in q_combat_stats.iter() {
         if combat_stats.hp <= 0 {
             if entity == player_entity.0 {
-                next_state.set(GameState::Menu);
+                app_state_manager.end_game();
             } else {
                 commands.entity(entity).despawn_recursive();
 
@@ -230,7 +237,7 @@ impl Plugin for CommonPlugin {
                 apply_damage,
                 delete_the_dead,
             )
-                .run_if(in_state(GameState::Playing)),
+                .run_if(in_state(AppState::InGame)),
         );
     }
 }

@@ -5,10 +5,9 @@ use crate::{
     common::{CombatStats, Position, Viewshed},
     consts::SPRITE_SIZE,
     loading::MainCamera,
-    logic::RunTurnState,
     map::MapInstance,
     player::Player,
-    GameState,
+    AppState, GameState,
 };
 
 use super::FontManager;
@@ -128,14 +127,11 @@ pub struct TooltipsPlugin;
 
 impl Plugin for TooltipsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Playing), (spawn_tooltip_ui,));
-        app.add_systems(
-            Update,
-            (update_tooltip,).run_if(in_state(RunTurnState::AwaitingInput)),
-        );
+        app.add_systems(OnEnter(AppState::InGame), (spawn_tooltip_ui,));
+        app.add_systems(Update, (update_tooltip,).run_if(in_state(AppState::InGame)));
 
-        app.add_systems(OnExit(RunTurnState::AwaitingInput), (hide_tooltip,));
-        app.add_systems(OnExit(GameState::Playing), (clear_tooltip_ui,));
+        app.add_systems(OnExit(GameState::ToolTip), (hide_tooltip,));
+        app.add_systems(OnExit(AppState::InGame), (clear_tooltip_ui,));
     }
 }
 

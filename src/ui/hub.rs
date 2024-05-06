@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     common::{CombatStats, GameLog},
     player::Player,
-    GameState,
+    AppState,
 };
 
 use super::{FontManager, TopUINode};
@@ -12,12 +12,12 @@ pub struct HudPlugin;
 
 impl Plugin for HudPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Playing), (spwan_bottom_hud,));
-        app.add_systems(OnExit(GameState::Playing), (clear_bottom_hud,));
+        app.add_systems(OnEnter(AppState::InGame), (spwan_bottom_hud,));
+        app.add_systems(OnExit(AppState::InGame), (clear_bottom_hud,));
 
         app.add_systems(
             Update,
-            (update_hp_text_and_bar, update_game_log).run_if(in_state(GameState::Playing)),
+            (update_hp_text_and_bar, update_game_log).run_if(in_state(AppState::InGame)),
         );
     }
 }

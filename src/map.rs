@@ -11,7 +11,7 @@ use crate::item::Item;
 use crate::loading::TextureAssets;
 use crate::render::create_sprite_sheet_bundle;
 use crate::theme::Theme;
-use crate::GameState;
+use crate::AppState;
 
 #[derive(Resource, Deref)]
 pub struct MapEntity(pub Entity);
@@ -51,7 +51,7 @@ pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (map_index,).run_if(in_state(GameState::Playing)));
+        app.add_systems(Update, (map_index,).run_if(in_state(AppState::InGame)));
     }
 }
 

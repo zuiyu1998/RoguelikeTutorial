@@ -1,16 +1,17 @@
 use crate::loading::TextureAssets;
-use crate::GameState;
+use crate::state::AppStateManager;
+use crate::AppState;
 use bevy::prelude::*;
 
 pub struct MenuPlugin;
 
 /// This plugin is responsible for the game menu (containing only one button...)
-/// The menu is only drawn during the State `GameState::Menu` and is removed when that state is exited
+/// The menu is only drawn during the State `AppState::Menu` and is removed when that state is exited
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Menu), setup_menu)
-            .add_systems(Update, click_play_button.run_if(in_state(GameState::Menu)))
-            .add_systems(OnExit(GameState::Menu), cleanup_menu);
+        app.add_systems(OnEnter(AppState::Menu), setup_menu)
+            .add_systems(Update, click_play_button.run_if(in_state(AppState::Menu)))
+            .add_systems(OnExit(AppState::Menu), cleanup_menu);
     }
 }
 
@@ -64,7 +65,7 @@ fn setup_menu(mut commands: Commands, textures: Res<TextureAssets>) {
                         ..Default::default()
                     },
                     button_colors,
-                    ChangeState(GameState::Playing),
+                    ChangeState,
                 ))
                 .with_children(|parent| {
                     parent.spawn(TextBundle::from_section(
@@ -174,13 +175,13 @@ fn setup_menu(mut commands: Commands, textures: Res<TextureAssets>) {
 }
 
 #[derive(Component)]
-struct ChangeState(GameState);
+struct ChangeState;
 
 #[derive(Component)]
 struct OpenLink(&'static str);
 
 fn click_play_button(
-    mut next_state: ResMut<NextState<GameState>>,
+    mut app_state_manager: AppStateManager,
     mut interaction_query: Query<
         (
             &Interaction,
@@ -195,8 +196,8 @@ fn click_play_button(
     for (interaction, mut color, button_colors, change_state, open_link) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                if let Some(state) = change_state {
-                    next_state.set(state.0.clone());
+                if let Some(_) = change_state {
+                    app_state_manager.start_game();
                 } else if let Some(link) = open_link {
                     if let Err(error) = webbrowser::open(link.0) {
                         warn!("Failed to open link {error:?}");

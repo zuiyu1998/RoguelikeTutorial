@@ -3,58 +3,18 @@ use crate::{
     map::{new_map_rooms_and_corridors, MapEntity},
     player::{PlayerEntity, PlayerPosition},
     spawner::{self, spawn_room, ThemeContext},
-    GameState,
+    AppState,
 };
 use bevy::prelude::*;
 use bracket_pathfinding::prelude::Point;
-
-#[derive(States, Default, Clone, Eq, PartialEq, Debug, Hash)]
-pub enum RunTurnState {
-    #[default]
-    PreRun,
-    //等待输入
-    AwaitingInput,
-    PlayerTurn,
-    MonsterTurn,
-}
-
-pub fn change_to_awaiting_input(
-    mut next_state: ResMut<NextState<RunTurnState>>,
-    game_ns: Res<State<GameState>>,
-) {
-    if *game_ns == GameState::Playing {
-        next_state.set(RunTurnState::AwaitingInput);
-    }
-}
-
-pub fn change_to_monster_turn(mut next_state: ResMut<NextState<RunTurnState>>) {
-    next_state.set(RunTurnState::MonsterTurn);
-}
 
 pub struct LogicPlugin;
 
 impl Plugin for LogicPlugin {
     fn build(&self, app: &mut App) {
-        app.init_state::<RunTurnState>();
+        app.add_systems(OnEnter(AppState::InGame), (setup_game,));
 
-        app.add_systems(OnEnter(GameState::Playing), (setup_game,));
-
-        app.add_systems(OnExit(GameState::Playing), clear_game);
-
-        app.add_systems(
-            Update,
-            (change_to_awaiting_input,).run_if(in_state(RunTurnState::PreRun)),
-        );
-
-        app.add_systems(
-            Update,
-            (change_to_monster_turn,).run_if(in_state(RunTurnState::PlayerTurn)),
-        );
-
-        app.add_systems(
-            Update,
-            (change_to_awaiting_input,).run_if(in_state(RunTurnState::MonsterTurn)),
-        );
+        app.add_systems(OnExit(AppState::InGame), clear_game);
     }
 }
 

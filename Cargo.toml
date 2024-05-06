@@ -74,6 +74,7 @@ image = { version = "0.24", default-features = false }
 
 bracket-random = { version = "0.8" }
 bracket-pathfinding = { version = "0.8" }
+seldom_state = { version = "0.10" }
 
 bevy_editor_pls = { version = "0.8", optional = true }
 

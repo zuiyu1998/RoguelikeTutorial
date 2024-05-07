@@ -7,6 +7,7 @@ use crate::{
     loading::MainCamera,
     map::MapInstance,
     player::Player,
+    state::AppStateManager,
     AppState, GameState,
 };
 
@@ -29,9 +30,11 @@ fn update_tooltip(
     // query to get the player field of view
     player_fov_q: Query<&Viewshed, With<Player>>,
     q_map: Query<&GlobalTransform, With<MapInstance>>,
+    mut app_state_manager: AppStateManager,
 ) {
     // if the user left clicks
     if buttons.just_pressed(MouseButton::Left) {
+        app_state_manager.start_tootip();
         // get the primary window
         let wnd = wnds.get_single().unwrap();
 
@@ -106,6 +109,15 @@ fn update_tooltip(
     }
 }
 
+fn change_to_playing(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut app_state_manager: AppStateManager,
+) {
+    if keyboard_input.just_pressed(KeyCode::Escape) || keyboard_input.just_pressed(KeyCode::Space) {
+        app_state_manager.start_playing();
+    }
+}
+
 fn hide_tooltip(
     mut text_box_query: ParamSet<(
         Query<&mut Visibility, With<ToolTipText>>,
@@ -128,7 +140,15 @@ pub struct TooltipsPlugin;
 impl Plugin for TooltipsPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(AppState::InGame), (spawn_tooltip_ui,));
-        app.add_systems(Update, (update_tooltip,).run_if(in_state(AppState::InGame)));
+        app.add_systems(
+            Update,
+            (update_tooltip,).run_if(in_state(GameState::Playing)),
+        );
+
+        app.add_systems(
+            Update,
+            (change_to_playing,).run_if(in_state(GameState::ToolTip)),
+        );
 
         app.add_systems(OnExit(GameState::ToolTip), (hide_tooltip,));
         app.add_systems(OnExit(AppState::InGame), (clear_tooltip_ui,));

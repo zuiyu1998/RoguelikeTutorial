@@ -5,7 +5,7 @@ use crate::{
     common::{CombatStats, Position, WantsToMelee},
     item::WantsToPickupItem,
     map::Map,
-    AppState,
+    AppState, GameState,
 };
 
 #[derive(Resource)]
@@ -21,7 +21,7 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (player_input,).run_if(in_state(AppState::InGame)));
+        app.add_systems(Update, (player_input,).run_if(in_state(GameState::Playing)));
     }
 }
 

@@ -16,6 +16,14 @@ impl<'w> AppStateManager<'w> {
         self.app_next_state.set(AppState::Menu);
         self.game_next_state.set(GameState::None);
     }
+
+    pub fn start_tootip(&mut self) {
+        self.game_next_state.set(GameState::ToolTip);
+    }
+
+    pub fn start_playing(&mut self) {
+        self.game_next_state.set(GameState::Playing);
+    }
 }
 
 pub struct StatePlugin;

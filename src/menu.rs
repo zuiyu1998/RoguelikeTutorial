@@ -1,221 +1,88 @@
-use crate::loading::TextureAssets;
-use crate::state::AppStateManager;
-use crate::AppState;
 use bevy::prelude::*;
+use bevy_egui::{
+    egui::{self, Align2},
+    EguiContexts,
+};
+
+use crate::{state::AppStateManager, AppState};
+
+pub struct MenuUiState {
+    item_list: Vec<MenuItem>,
+}
+
+impl Default for MenuUiState {
+    fn default() -> Self {
+        MenuUiState {
+            item_list: vec![MenuItem::playing()],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Event)]
+pub struct MenuItem {
+    item_type: MenuItemType,
+}
+
+impl MenuItem {
+    pub fn playing() -> Self {
+        MenuItem {
+            item_type: MenuItemType::Playing,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum MenuItemType {
+    Playing,
+}
+
+impl ToString for MenuItemType {
+    fn to_string(&self) -> String {
+        match *self {
+            MenuItemType::Playing => format!("Playing"),
+        }
+    }
+}
 
 pub struct MenuPlugin;
 
-/// This plugin is responsible for the game menu (containing only one button...)
-/// The menu is only drawn during the State `AppState::Menu` and is removed when that state is exited
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::Menu), setup_menu)
-            .add_systems(Update, click_play_button.run_if(in_state(AppState::Menu)))
-            .add_systems(OnExit(AppState::Menu), cleanup_menu);
+        app.add_event::<MenuItem>();
+
+        app.add_systems(
+            Update,
+            (show_menu, handle_menu_item).run_if(in_state(AppState::Menu)),
+        );
     }
 }
 
-#[derive(Component)]
-struct ButtonColors {
-    normal: Color,
-    hovered: Color,
-}
-
-impl Default for ButtonColors {
-    fn default() -> Self {
-        ButtonColors {
-            normal: Color::rgb(0.15, 0.15, 0.15),
-            hovered: Color::rgb(0.25, 0.25, 0.25),
+fn handle_menu_item(
+    mut menu_item_er: EventReader<MenuItem>,
+    mut app_state_manager: AppStateManager,
+) {
+    for e in menu_item_er.read() {
+        match e.item_type {
+            MenuItemType::Playing => {
+                app_state_manager.start_game();
+            }
         }
     }
 }
 
-#[derive(Component)]
-struct Menu;
+fn show_menu(mut contexts: EguiContexts, mut menu_item_ew: EventWriter<MenuItem>) {
+    let ui_state = MenuUiState::default();
 
-fn setup_menu(mut commands: Commands, textures: Res<TextureAssets>) {
-    commands
-        .spawn((
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                ..default()
-            },
-            Menu,
-        ))
-        .with_children(|children| {
-            let button_colors = ButtonColors::default();
-            children
-                .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            width: Val::Px(140.0),
-                            height: Val::Px(50.0),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..Default::default()
-                        },
-                        background_color: button_colors.normal.into(),
-                        ..Default::default()
-                    },
-                    button_colors,
-                    ChangeState,
-                ))
-                .with_children(|parent| {
-                    parent.spawn(TextBundle::from_section(
-                        "Play",
-                        TextStyle {
-                            font_size: 40.0,
-                            color: Color::rgb(0.9, 0.9, 0.9),
-                            ..default()
-                        },
-                    ));
-                });
-        });
-    commands
-        .spawn((
-            NodeBundle {
-                style: Style {
-                    flex_direction: FlexDirection::Row,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::SpaceAround,
-                    bottom: Val::Px(5.),
-                    width: Val::Percent(100.),
-                    position_type: PositionType::Absolute,
-                    ..default()
-                },
-                ..default()
-            },
-            Menu,
-        ))
-        .with_children(|children| {
-            children
-                .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            width: Val::Px(170.0),
-                            height: Val::Px(50.0),
-                            justify_content: JustifyContent::SpaceAround,
-                            align_items: AlignItems::Center,
-                            padding: UiRect::all(Val::Px(5.)),
-                            ..Default::default()
-                        },
-                        background_color: Color::NONE.into(),
-                        ..Default::default()
-                    },
-                    ButtonColors {
-                        normal: Color::NONE,
-                        ..default()
-                    },
-                    OpenLink("https://bevyengine.org"),
-                ))
-                .with_children(|parent| {
-                    parent.spawn(TextBundle::from_section(
-                        "Made with Bevy",
-                        TextStyle {
-                            font_size: 15.0,
-                            color: Color::rgb(0.9, 0.9, 0.9),
-                            ..default()
-                        },
-                    ));
-                    parent.spawn(ImageBundle {
-                        image: textures.bevy.clone().into(),
-                        style: Style {
-                            width: Val::Px(32.),
-                            ..default()
-                        },
-                        ..default()
-                    });
-                });
-            children
-                .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            width: Val::Px(170.0),
-                            height: Val::Px(50.0),
-                            justify_content: JustifyContent::SpaceAround,
-                            align_items: AlignItems::Center,
-                            padding: UiRect::all(Val::Px(5.)),
-                            ..default()
-                        },
-                        background_color: Color::NONE.into(),
-                        ..Default::default()
-                    },
-                    ButtonColors {
-                        normal: Color::NONE,
-                        hovered: Color::rgb(0.25, 0.25, 0.25),
-                    },
-                    OpenLink("https://github.com/NiklasEi/roguelike_tutorial_template"),
-                ))
-                .with_children(|parent| {
-                    parent.spawn(TextBundle::from_section(
-                        "Open source",
-                        TextStyle {
-                            font_size: 15.0,
-                            color: Color::rgb(0.9, 0.9, 0.9),
-                            ..default()
-                        },
-                    ));
-                    parent.spawn(ImageBundle {
-                        image: textures.github.clone().into(),
-                        style: Style {
-                            width: Val::Px(32.),
-                            ..default()
-                        },
-                        ..default()
-                    });
-                });
-        });
-}
+    egui::Window::new("menu")
+        .title_bar(false)
+        .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
+        .show(contexts.ctx_mut(), |ui| {
+            for item in ui_state.item_list.iter() {
+                let button = ui.add(egui::Button::new(item.item_type.to_string()));
 
-#[derive(Component)]
-struct ChangeState;
-
-#[derive(Component)]
-struct OpenLink(&'static str);
-
-fn click_play_button(
-    mut app_state_manager: AppStateManager,
-    mut interaction_query: Query<
-        (
-            &Interaction,
-            &mut BackgroundColor,
-            &ButtonColors,
-            Option<&ChangeState>,
-            Option<&OpenLink>,
-        ),
-        (Changed<Interaction>, With<Button>),
-    >,
-) {
-    for (interaction, mut color, button_colors, change_state, open_link) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                if let Some(_) = change_state {
-                    app_state_manager.start_game();
-                } else if let Some(link) = open_link {
-                    if let Err(error) = webbrowser::open(link.0) {
-                        warn!("Failed to open link {error:?}");
-                    }
+                if button.clicked() {
+                    menu_item_ew.send(item.clone());
                 }
             }
-            Interaction::Hovered => {
-                *color = button_colors.hovered.into();
-            }
-            Interaction::None => {
-                *color = button_colors.normal.into();
-            }
-        }
-    }
-}
-
-fn cleanup_menu(mut commands: Commands, menu: Query<Entity, With<Menu>>) {
-    for entity in menu.iter() {
-        commands.entity(entity).despawn_recursive();
-    }
+        });
 }

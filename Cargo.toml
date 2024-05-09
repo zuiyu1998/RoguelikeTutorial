@@ -33,7 +33,7 @@ strip = true
 
 [features]
 default = ['dev']
-dev = ["bevy/dynamic_linking", "bevy_editor_pls"]
+dev = ["bevy/dynamic_linking", "bevy-inspector-egui"]
 dev_not_editor = []
 
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
@@ -76,7 +76,8 @@ bracket-random = { version = "0.8" }
 bracket-pathfinding = { version = "0.8" }
 seldom_state = { version = "0.10" }
 
-bevy_editor_pls = { version = "0.8", optional = true }
+bevy-inspector-egui = { version = "0.24", optional = true }
+bevy_egui = { version = "0.27" }
 
 [build-dependencies]
 embed-resource = "1"

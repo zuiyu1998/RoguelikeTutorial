@@ -5,7 +5,7 @@ use crate::{
     common::{CombatStats, Position, WantsToMelee},
     item::WantsToPickupItem,
     map::Map,
-    AppState, GameState,
+    GameState,
 };
 
 #[derive(Resource)]

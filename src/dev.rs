@@ -1,5 +1,5 @@
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
-use bevy_editor_pls::EditorPlugin;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use bevy::prelude::*;
 
@@ -10,7 +10,7 @@ impl Plugin for DevPlugin {
         app.add_plugins((
             FrameTimeDiagnosticsPlugin,
             LogDiagnosticsPlugin::default(),
-            EditorPlugin::new(),
+            WorldInspectorPlugin::new(),
         ));
     }
 }

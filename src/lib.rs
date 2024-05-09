@@ -3,6 +3,7 @@
 mod audio;
 mod common;
 mod consts;
+mod core;
 mod enemy;
 mod item;
 mod loading;
@@ -23,6 +24,7 @@ pub use state::{AppState, GameState};
 
 use crate::audio::InternalAudioPlugin;
 use crate::common::CommonPlugin;
+use crate::core::InternalCorePlugin;
 use crate::enemy::EnemyPlugin;
 use crate::item::ItemPlugin;
 use crate::loading::LoadingPlugin;
@@ -57,6 +59,7 @@ impl Plugin for GamePlugin {
             ItemPlugin,
             StateMachinePlugin,
             StatePlugin,
+            InternalCorePlugin,
         ));
 
         #[cfg(feature = "dev")]

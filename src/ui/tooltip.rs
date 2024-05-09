@@ -1,17 +1,20 @@
 use bevy::{prelude::*, window::PrimaryWindow};
+use bevy_egui::{egui, EguiContexts};
 use bracket_pathfinding::prelude::Point;
 
 use crate::{
     common::{CombatStats, Position, Viewshed},
     consts::SPRITE_SIZE,
+    enemy::Enemy,
     loading::MainCamera,
     map::MapInstance,
     player::Player,
     state::AppStateManager,
-    AppState, GameState,
+    GameState,
 };
 
-use super::FontManager;
+#[derive(Resource, Default)]
+pub struct ToolTipEntity(pub Option<Entity>);
 
 fn update_tooltip(
     // need to get window dimensions
@@ -21,20 +24,15 @@ fn update_tooltip(
     // query to get camera transform
     q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     // query to get all the entities with Name component
-    q_names: Query<(&Position, &Name, &CombatStats)>,
-    // // query to get tooltip text and box
-    mut text_box_query: ParamSet<(
-        Query<(&mut Text, &mut Visibility), With<ToolTipText>>,
-        Query<(&mut Style, &mut Visibility), With<ToolTipBox>>,
-    )>,
+    q_names: Query<(&Position, Entity), With<Enemy>>,
     // query to get the player field of view
     player_fov_q: Query<&Viewshed, With<Player>>,
     q_map: Query<&GlobalTransform, With<MapInstance>>,
     mut app_state_manager: AppStateManager,
+    mut tooltip_entity: ResMut<ToolTipEntity>,
 ) {
     // if the user left clicks
     if buttons.just_pressed(MouseButton::Left) {
-        app_state_manager.start_tootip();
         // get the primary window
         let wnd = wnds.get_single().unwrap();
 
@@ -62,50 +60,44 @@ fn update_tooltip(
             // now we go through all the entities with name to see which one is the nearest
             // some variables placeholders to save the entity name and its health
             let mut good_click = false;
-            let mut s = String::new();
-            let mut maxh = 0;
-            let mut currenth = 0;
+            let mut tooltip_entity_tmp: Option<Entity> = None;
+
             // obtain also player fov
             let player_fov = player_fov_q.single();
 
             q_names
                 .iter()
-                .filter(|(pos, _, _)| {
+                .filter(|(pos, _)| {
                     **pos == grid_position
                         && player_fov
                             .visible_tiles
                             .contains(&(Point::new(grid_position.x, grid_position.y)))
                 })
-                .for_each(|(_, name, combat_stats)| {
-                    s = name.as_str().to_string();
+                .for_each(|(_, entity)| {
                     good_click = true;
-                    // if it also has health component
-
-                    maxh = combat_stats.max_hp;
-                    currenth = combat_stats.hp;
+                    tooltip_entity_tmp = Some(entity);
                 });
 
-            // update tooltip text
-            for (mut text, mut visible) in text_box_query.p0().iter_mut() {
-                if currenth > 0 {
-                    text.sections[0].value = format!("{} HP: {} / {}", s, currenth, maxh);
-                } else {
-                    text.sections[0].value = format!("{}", s);
-                }
-                *visible = Visibility::Visible;
-            }
+            if good_click {
+                app_state_manager.start_tootip();
 
-            // update box position
-            for (mut boxnode, mut visible) in text_box_query.p1().iter_mut() {
-                if good_click {
-                    boxnode.left = Val::Px(pos.x - 100.0);
-                    boxnode.top = Val::Px(pos.y - 40.0);
-                    *visible = Visibility::Visible;
-                } else {
-                    *visible = Visibility::Hidden;
-                }
+                tooltip_entity.0 = tooltip_entity_tmp;
             }
         }
+    }
+}
+
+fn show_tooltip(
+    tooltip_entity: ResMut<ToolTipEntity>,
+    q_enemy: Query<(&CombatStats, &Name)>,
+    mut contexts: EguiContexts,
+) {
+    let entity = tooltip_entity.0.clone().unwrap();
+
+    if let Ok((stats, name)) = q_enemy.get(entity) {
+        egui::show_tooltip(contexts.ctx_mut(), egui::Id::new("my_tooltip"), |ui| {
+            ui.label(format!("{} {}:{}", name, stats.hp, stats.max_hp));
+        });
     }
 }
 
@@ -118,28 +110,12 @@ fn change_to_playing(
     }
 }
 
-fn hide_tooltip(
-    mut text_box_query: ParamSet<(
-        Query<&mut Visibility, With<ToolTipText>>,
-        Query<&mut Visibility, With<ToolTipBox>>,
-    )>,
-) {
-    // update tooltip visibility
-    for mut visible in text_box_query.p0().iter_mut() {
-        *visible = Visibility::Hidden;
-    }
-
-    // update box visibility
-    for mut visible in text_box_query.p1().iter_mut() {
-        *visible = Visibility::Hidden;
-    }
-}
-
 pub struct TooltipsPlugin;
 
 impl Plugin for TooltipsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::InGame), (spawn_tooltip_ui,));
+        app.init_resource::<ToolTipEntity>();
+
         app.add_systems(
             Update,
             (update_tooltip,).run_if(in_state(GameState::Playing)),
@@ -147,65 +123,7 @@ impl Plugin for TooltipsPlugin {
 
         app.add_systems(
             Update,
-            (change_to_playing,).run_if(in_state(GameState::ToolTip)),
+            (change_to_playing, show_tooltip, update_tooltip).run_if(in_state(GameState::ToolTip)),
         );
-
-        app.add_systems(OnExit(GameState::ToolTip), (hide_tooltip,));
-        app.add_systems(OnExit(AppState::InGame), (clear_tooltip_ui,));
     }
-}
-
-#[derive(Component)]
-struct ToolTipText;
-
-#[derive(Component)]
-struct ToolTipBox;
-
-fn clear_tooltip_ui(mut commands: Commands, q_tooltip_box: Query<Entity, With<ToolTipBox>>) {
-    for entity in q_tooltip_box.iter() {
-        commands.entity(entity).despawn_recursive();
-    }
-}
-
-fn spawn_tooltip_ui(mut commands: Commands, font_manager: Res<FontManager>) {
-    commands
-        // root node, just a black rectangle where the text will be
-        .spawn((
-            NodeBundle {
-                // by default we set visible to false so it starts hidden
-                visibility: Visibility::Hidden,
-                style: Style {
-                    width: Val::Px(300.0),
-                    height: Val::Px(30.0),
-                    position_type: PositionType::Absolute,
-                    ..Default::default()
-                },
-                background_color: BackgroundColor(Color::rgb(0.0, 0.0, 0.0)),
-                ..Default::default()
-            },
-            ToolTipBox,
-        ))
-        .with_children(|parent| {
-            // text
-            parent.spawn((
-                TextBundle {
-                    visibility: Visibility::Hidden,
-                    style: Style {
-                        height: Val::Px(20. * 1.),
-                        margin: UiRect::all(Val::Auto),
-                        ..Default::default()
-                    },
-                    text: Text::from_section(
-                        "Goblin. HP: 2 / 2",
-                        TextStyle {
-                            font: font_manager.font.clone(),
-                            font_size: 20.0,
-                            color: Color::WHITE,
-                        },
-                    ),
-                    ..Default::default()
-                },
-                ToolTipText,
-            ));
-        });
 }

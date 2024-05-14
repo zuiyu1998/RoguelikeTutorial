@@ -6,9 +6,9 @@ use bracket_random::prelude::RandomNumberGenerator;
 
 use crate::common::Position;
 use crate::consts::{MAP_Z_INDEX, SPRITE_SIZE};
+use crate::core::TextureAssets;
 use crate::enemy::Enemy;
 use crate::item::Item;
-use crate::loading::TextureAssets;
 use crate::render::create_sprite_sheet_bundle;
 use crate::theme::Theme;
 use crate::AppState;

@@ -1,8 +1,9 @@
-use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts};
+use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy_egui::egui;
 
 use crate::{
     common::{CombatStats, GameLog},
+    core::prelude::*,
     player::Player,
     AppState,
 };
@@ -11,50 +12,87 @@ pub struct HudPlugin;
 
 impl Plugin for HudPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, show_hud.run_if(in_state(AppState::InGame)));
+        app.add_systems(
+            Update,
+            HudParams::show_ui.run_if(in_state(AppState::InGame)),
+        );
     }
 }
 
-fn show_hud(
-    q_stats: Query<&CombatStats, With<Player>>,
-    game_log: Res<GameLog>,
-    mut contexts: EguiContexts,
-) {
-    let stats = q_stats.single();
+#[derive(SystemParam)]
+pub struct HudParams<'w, 's> {
+    q_stats: Query<'w, 's, &'static CombatStats, With<Player>>,
+    game_log: Res<'w, GameLog>,
+}
 
-    let length = game_log.entries.len();
+impl<'w, 's> UiSystem for HudParams<'w, 's>
+where
+    'w: 'static,
+    's: 'static,
+{
+    type UiState = HudUiState;
 
-    let mut logs = vec![];
+    fn extra_ui_state(item: &<Self as SystemParam>::Item<'_, '_>) -> Self::UiState {
+        let stats = item.q_stats.single();
 
-    if length <= 4 {
-        for i in 0..length {
-            logs.push(game_log.entries[i].clone());
+        let length = item.game_log.entries.len();
+
+        let mut logs = vec![];
+
+        if length <= 4 {
+            for i in 0..length {
+                logs.push(item.game_log.entries[i].clone());
+            }
+        } else {
+            for i in length - 4..length {
+                logs.push(item.game_log.entries[i].clone());
+            }
         }
-    } else {
-        for i in length - 4..length {
-            logs.push(game_log.entries[i].clone());
+
+        HudUiState {
+            logs,
+            hp: stats.hp,
+            max_hp: stats.max_hp,
         }
     }
+}
 
-    egui::TopBottomPanel::bottom("my_bottom")
-        .min_height(100.0)
-        .show(contexts.ctx_mut(), |ui| {
-            ui.columns(2, |columns| {
-                egui::ScrollArea::vertical().show(&mut columns[0], |ui| {
-                    for log in logs.iter() {
-                        ui.label(log);
-                    }
-                });
+pub struct HudUiState {
+    logs: Vec<String>,
+    hp: i32,
+    max_hp: i32,
+}
 
-                egui::Frame::none().show(&mut columns[1], |ui| {
-                    ui.horizontal(|ui| {
-                        let progress = stats.hp as f32 / stats.max_hp as f32;
+impl<'w, 's> UiContainer<HudParams<'w, 's>> for HudUiState
+where
+    'w: 'static,
+    's: 'static,
+{
+    fn container(
+        &self,
+        ui_context: EguiUiContext,
+        _bevy_context: BevyBuildContext<<HudParams<'w, 's> as SystemParam>::Item<'_, '_>>,
+    ) {
+        egui::TopBottomPanel::bottom("my_bottom")
+            .min_height(100.0)
+            .show(ui_context.get(), |ui| {
+                ui.columns(2, |columns| {
+                    egui::ScrollArea::vertical().show(&mut columns[0], |ui| {
+                        for log in self.logs.iter() {
+                            ui.label(log);
+                        }
+                    });
 
-                        ui.label(format!("{}/{}", stats.hp, stats.max_hp));
+                    egui::Frame::none().show(&mut columns[1], |ui| {
+                        ui.horizontal(|ui| {
+                            let progress = self.hp as f32 / self.max_hp as f32;
 
-                        ui.add(egui::ProgressBar::new(progress));
+                            ui.label(format!("{}/{}", self.hp, self.max_hp));
+
+                            ui.add(egui::ProgressBar::new(progress));
+                        });
                     });
                 });
             });
-        });
+    }
 }

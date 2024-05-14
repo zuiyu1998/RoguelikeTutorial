@@ -1,10 +1,7 @@
-use bevy::prelude::*;
-use bevy_egui::{
-    egui::{self, Align2},
-    EguiContexts,
-};
+use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy_egui::egui::{self, Align2};
 
-use crate::{state::AppStateManager, AppState};
+use crate::{core::prelude::*, state::AppStateManager, AppState};
 
 pub struct MenuUiState {
     item_list: Vec<MenuItem>,
@@ -31,6 +28,50 @@ impl MenuItem {
     }
 }
 
+#[derive(SystemParam)]
+pub struct MenuUiParams<'w> {
+    pub menu_item_er: EventWriter<'w, MenuItem>,
+}
+
+impl<'w> UiSystem for MenuUiParams<'w>
+where
+    'w: 'static,
+{
+    type UiState = MenuUiState;
+
+    fn extra_ui_state(
+        _item: &<Self as bevy::ecs::system::SystemParam>::Item<'_, '_>,
+    ) -> Self::UiState {
+        MenuUiState::default()
+    }
+}
+
+impl<'w> UiContainer<MenuUiParams<'w>> for MenuUiState
+where
+    'w: 'static,
+{
+    fn container(
+        &self,
+        ui_context: EguiUiContext,
+        mut bevy_context: BevyBuildContext<
+            <MenuUiParams<'w> as bevy::ecs::system::SystemParam>::Item<'_, '_>,
+        >,
+    ) {
+        egui::Window::new("menu")
+            .title_bar(false)
+            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ui_context.get(), |ui| {
+                for item in self.item_list.iter() {
+                    let button = ui.add(egui::Button::new(item.item_type.to_string()));
+
+                    if button.clicked() {
+                        bevy_context.item.menu_item_er.send(item.clone());
+                    }
+                }
+            });
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum MenuItemType {
     Playing,
@@ -52,7 +93,7 @@ impl Plugin for MenuPlugin {
 
         app.add_systems(
             Update,
-            (show_menu, handle_menu_item).run_if(in_state(AppState::Menu)),
+            (MenuUiParams::show_ui, handle_menu_item).run_if(in_state(AppState::Menu)),
         );
     }
 }
@@ -68,21 +109,4 @@ fn handle_menu_item(
             }
         }
     }
-}
-
-fn show_menu(mut contexts: EguiContexts, mut menu_item_ew: EventWriter<MenuItem>) {
-    let ui_state = MenuUiState::default();
-
-    egui::Window::new("menu")
-        .title_bar(false)
-        .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
-        .show(contexts.ctx_mut(), |ui| {
-            for item in ui_state.item_list.iter() {
-                let button = ui.add(egui::Button::new(item.item_type.to_string()));
-
-                if button.clicked() {
-                    menu_item_ew.send(item.clone());
-                }
-            }
-        });
 }

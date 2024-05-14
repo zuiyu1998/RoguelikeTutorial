@@ -1,5 +1,5 @@
 use crate::consts::SPRITE_SIZE;
-use crate::loading::TextureAssets;
+use crate::core::TextureAssets;
 use bevy::prelude::*;
 
 #[derive(Debug, Clone, Copy)]

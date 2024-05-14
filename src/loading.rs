@@ -1,4 +1,4 @@
-use crate::{ui::FontManager, AppState};
+use crate::{core::TextureAssets, AppState};
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_kira_audio::AudioSource;
@@ -17,8 +17,7 @@ impl Plugin for LoadingPlugin {
             LoadingState::new(AppState::Loading)
                 .continue_to_state(AppState::Menu)
                 .load_collection::<AudioAssets>()
-                .load_collection::<TextureAssets>()
-                .load_collection::<FontManager>(),
+                .load_collection::<TextureAssets>(),
         );
 
         app.add_systems(Startup, setup);
@@ -36,14 +35,4 @@ pub fn setup(mut commands: Commands) {
 pub struct AudioAssets {
     #[asset(path = "audio/flying.ogg")]
     pub flying: Handle<AudioSource>,
-}
-
-#[derive(AssetCollection, Resource)]
-pub struct TextureAssets {
-    #[asset(path = "textures/bevy.png")]
-    pub bevy: Handle<Image>,
-    #[asset(path = "textures/github.png")]
-    pub github: Handle<Image>,
-    #[asset(path = "textures/terminal8x8_transparent.png")]
-    pub terminal: Handle<Image>,
 }

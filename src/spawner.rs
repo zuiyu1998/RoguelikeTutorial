@@ -12,9 +12,9 @@ use bevy::{
 use crate::{
     common::{CombatStats, Position, RandomNumberGenerator, Viewshed},
     consts::{ENEMY_Z_INDEX, ITEM_Z_INDEX, PLAYER_Z_INDEX},
+    core::TextureAssets,
     enemy::{add_state_machine, Enemy, EnemyType},
     item::{Item, ItemType, Potion},
-    loading::TextureAssets,
     map::{BlocksTile, Rect},
     player::Player,
     render::create_sprite_sheet_bundle,
@@ -48,6 +48,7 @@ pub fn health_potion(
             Name::new("Item"),
             Item {},
             Potion { heal_amount: 10 },
+            ItemType::HealthPotion,
         ))
         .id()
 }

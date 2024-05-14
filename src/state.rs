@@ -24,6 +24,10 @@ impl<'w> AppStateManager<'w> {
     pub fn start_playing(&mut self) {
         self.game_next_state.set(GameState::Playing);
     }
+
+    pub fn start_tab(&mut self) {
+        self.game_next_state.set(GameState::Tab);
+    }
 }
 
 pub struct StatePlugin;
@@ -52,5 +56,8 @@ pub enum GameState {
     None,
     Playing,
     Pause,
+    //查看敌人信息
     ToolTip,
+    //查看玩家信息
+    Tab,
 }

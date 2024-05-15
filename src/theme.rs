@@ -51,6 +51,11 @@ impl MapTheme for DefaultTheme {
                 color: Color::PURPLE,
                 index: '¡' as usize,
             },
+
+            ItemType::MagicMissileScroll => Glyph {
+                color: Color::PURPLE,
+                index: ')' as usize,
+            },
         }
     }
 

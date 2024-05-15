@@ -1,11 +1,54 @@
-mod potion;
+mod component;
 
 use bevy::{prelude::*, utils::HashMap};
-use std::marker::PhantomData;
 
-use crate::{common::Position, core::TextureAssets, AppState};
+use crate::{
+    common::{CombatStats, GameLog, Position},
+    core::TextureAssets,
+    AppState,
+};
 
-pub use potion::*;
+pub use component::*;
+
+//使用生命药水
+fn item_use_healing(
+    q_wants_use_item: Query<(&Parent, &WantsToUseItem, Entity)>,
+    mut q_stats: Query<&mut CombatStats>,
+    mut q_items: Query<(Option<&Consumable>, &ProvidesHealing), (With<Item>, With<InBackpack>)>,
+    mut item_remove_ew: EventWriter<ItemRemoveEvent>,
+    mut commands: Commands,
+) {
+    for (parent, wants_use_item, entity) in q_wants_use_item.iter() {
+        commands.entity(entity).despawn_recursive();
+
+        item_remove_ew.send(ItemRemoveEvent {
+            owner: parent.get(),
+            item: wants_use_item.item,
+        });
+
+        if let Ok((consuable, healing)) = q_items.get_mut(wants_use_item.item) {
+            if consuable.is_some() {
+                commands.entity(wants_use_item.item).despawn_recursive();
+            }
+
+            if let Ok(mut stats) = q_stats.get_mut(parent.get()) {
+                let tmp_hp = stats.hp + healing.heal_amount;
+
+                stats.hp = tmp_hp.min(stats.max_hp);
+            }
+        }
+    }
+}
+
+#[derive(Component, Debug)]
+pub struct Ranged {
+    pub range: i32,
+}
+
+#[derive(Component, Debug)]
+pub struct InflictsDamage {
+    pub damage: i32,
+}
 
 fn item_on_start_game(mut commands: Commands) {
     commands.init_resource::<ItemInBackpacks>();
@@ -19,40 +62,22 @@ pub struct ItemPlugin;
 
 impl Plugin for ItemPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((PotionPlugin,));
-
         app.add_event::<ItemAddedEvent>();
-        app.add_event::<ItemApplyEvent>();
         app.add_event::<ItemRemoveEvent>();
+        app.add_event::<ItemApplyEvent>();
 
         app.add_systems(OnEnter(AppState::InGame), item_on_start_game);
         app.add_systems(OnExit(AppState::InGame), item_on_end_game);
 
         app.add_systems(
             Update,
-            (item_collect, handle_item_update_event).run_if(in_state(AppState::InGame)),
-        );
-    }
-}
-
-pub struct ItemTypePlugin<Item>(PhantomData<Item>);
-
-impl<Item> Default for ItemTypePlugin<Item> {
-    fn default() -> Self {
-        ItemTypePlugin(PhantomData::default())
-    }
-}
-
-impl<Item> Plugin for ItemTypePlugin<Item>
-where
-    Item: ItemComponent,
-{
-    fn build(&self, app: &mut App) {
-        app.add_event::<Item::Event>();
-
-        app.add_systems(
-            Update,
-            (handle_item_apply_event::<Item>).run_if(in_state(AppState::InGame)),
+            (
+                item_collect,
+                handle_item_update_event,
+                handle_item_apply_event,
+                item_use_healing,
+            )
+                .run_if(in_state(AppState::InGame)),
         );
     }
 }
@@ -88,33 +113,14 @@ pub struct ItemInBackpacks(HashMap<Entity, ItemInBackpack>);
 #[derive(Debug, Resource, Deref, DerefMut, Default)]
 pub struct ItemInBackpack(HashMap<ItemType, ItemData>);
 
-pub fn handle_item_apply_event<Item>(
+pub fn handle_item_apply_event(
     mut item_apply_er: EventReader<ItemApplyEvent>,
-    mut item_ew: EventWriter<Item::Event>,
-    mut item_reomve_ew: EventWriter<ItemRemoveEvent>,
-) where
-    Item: ItemComponent,
-{
-    let mut events = vec![];
-
-    for e in item_apply_er.read() {
-        if let Some(event) = Item::from_item_apply_event(e) {
-            events.push((
-                ItemRemoveEvent {
-                    owner: e.owner,
-                    item: e.item,
-                },
-                event,
-            ));
-        }
-    }
-
-    for (remove_event, item_event) in events.into_iter() {
-        item_ew.send(item_event);
-
-        if Item::once() {
-            item_reomve_ew.send(remove_event);
-        }
+    mut commands: Commands,
+) {
+    for event in item_apply_er.read() {
+        commands.entity(event.owner).with_children(|parent| {
+            parent.spawn(WantsToUseItem { item: event.item });
+        });
     }
 }
 
@@ -135,7 +141,14 @@ pub fn handle_item_update_event(
         let mut need_insert = true;
 
         if let Ok(item_type) = q_item.get_mut(event.item) {
-            let mut item_data = item_in_back.remove(item_type).unwrap_or_default();
+            let item_data = item_in_back.remove(item_type);
+
+            if item_data.is_none() {
+                continue;
+            }
+
+            let mut item_data = item_data.unwrap();
+
             item_data.count -= 1;
             item_data.data.pop();
 
@@ -171,12 +184,13 @@ pub fn handle_item_update_event(
 pub fn item_collect(
     mut commands: Commands,
     q_wants_to_pickup_item: Query<(&Parent, Entity, &WantsToPickupItem)>,
-    q_items: Query<Entity, (With<Item>, Without<InBackpack>)>,
+    q_items: Query<&Name, (With<Item>, Without<InBackpack>)>,
     mut item_ew: EventWriter<ItemAddedEvent>,
+    mut game_log: ResMut<GameLog>,
 ) {
     for (parent, wants_to_pickup_item_entity, wants_to_pickup_item) in q_wants_to_pickup_item.iter()
     {
-        if let Ok(_) = q_items.get(wants_to_pickup_item.item) {
+        if let Ok(name) = q_items.get(wants_to_pickup_item.item) {
             commands
                 .entity(wants_to_pickup_item.item)
                 .insert(InBackpack {
@@ -185,6 +199,8 @@ pub fn item_collect(
                 .remove::<SpriteSheetBundle>()
                 .remove::<Position>()
                 .set_parent(wants_to_pickup_item.collected_by);
+
+            game_log.entries.push(format!("You pick up the {}.", name));
 
             item_ew.send(ItemAddedEvent {
                 owner: parent.get(),
@@ -199,6 +215,7 @@ pub fn item_collect(
 }
 
 #[derive(Component, Debug, Clone)]
+#[component(storage = "SparseSet")]
 pub struct WantsToPickupItem {
     pub collected_by: Entity,
     pub item: Entity,
@@ -215,22 +232,14 @@ pub struct Item;
 #[derive(Debug, Component, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ItemType {
     HealthPotion,
+    MagicMissileScroll,
 }
 
 impl ItemType {
     pub fn get_image_handle(&self, texture_assets: &TextureAssets) -> Handle<Image> {
         match self {
             ItemType::HealthPotion => texture_assets.i.clone(),
+            ItemType::MagicMissileScroll => texture_assets.i.clone(),
         }
-    }
-}
-
-pub trait ItemComponent: Component {
-    type Event: Event;
-
-    fn from_item_apply_event(event: &ItemApplyEvent) -> Option<Self::Event>;
-
-    fn once() -> bool {
-        true
     }
 }

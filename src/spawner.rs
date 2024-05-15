@@ -14,7 +14,7 @@ use crate::{
     consts::{ENEMY_Z_INDEX, ITEM_Z_INDEX, PLAYER_Z_INDEX},
     core::TextureAssets,
     enemy::{add_state_machine, Enemy, EnemyType},
-    item::{Item, ItemType, Potion},
+    item::{Consumable, InflictsDamage, Item, ItemType, ProvidesHealing, Ranged},
     map::{BlocksTile, Rect},
     player::Player,
     render::create_sprite_sheet_bundle,
@@ -26,6 +26,36 @@ pub struct ThemeContext<'w> {
     pub texture_assets: ResMut<'w, TextureAssets>,
     pub layout_assets: ResMut<'w, Assets<TextureAtlasLayout>>,
     pub theme: ResMut<'w, Theme>,
+}
+
+pub fn magic_missile_scroll(
+    commands: &mut Commands,
+    theme_context: &mut ThemeContext,
+    x: i32,
+    y: i32,
+) -> Entity {
+    let mut sprite_bundle = create_sprite_sheet_bundle(
+        &theme_context.texture_assets,
+        &mut theme_context.layout_assets,
+        theme_context
+            .theme
+            .item_to_render(ItemType::MagicMissileScroll),
+    );
+    sprite_bundle.transform.translation.z = ITEM_Z_INDEX;
+
+    commands
+        .spawn((
+            sprite_bundle,
+            Position { x, y },
+            Name::new("Magic Missile Scroll"),
+            Item {},
+            ProvidesHealing { heal_amount: 10 },
+            Consumable {},
+            Ranged { range: 6 },
+            InflictsDamage { damage: 8 },
+            ItemType::MagicMissileScroll,
+        ))
+        .id()
 }
 
 pub fn health_potion(
@@ -47,7 +77,8 @@ pub fn health_potion(
             Position { x, y },
             Name::new("Item"),
             Item {},
-            Potion { heal_amount: 10 },
+            ProvidesHealing { heal_amount: 10 },
+            Consumable {},
             ItemType::HealthPotion,
         ))
         .id()
@@ -106,8 +137,8 @@ pub fn spawn_room(
         commands.entity(enemy).set_parent(map_entity);
     }
 
-    for pos in monster_spawn_points.iter() {
-        let item_entity = health_potion(commands, theme_context, pos.x, pos.y);
+    for pos in item_spawn_points.iter() {
+        let item_entity = random_item(commands, theme_context, rng, pos.x, pos.y);
 
         commands.entity(item_entity).set_parent(map_entity);
     }
@@ -206,6 +237,29 @@ pub fn orc(
     let monster = enemy(commands, theme_context, EnemyType::O, name, x, y);
 
     monster
+}
+
+pub fn random_item(
+    commands: &mut Commands,
+    theme_context: &mut ThemeContext,
+    rng: &mut RandomNumberGenerator,
+    x: i32,
+    y: i32,
+) -> Entity {
+    let roll: i32;
+    {
+        roll = rng.roll_dice(1, 2);
+    }
+
+    match roll {
+        1 => {
+            return health_potion(commands, theme_context, x, y);
+        }
+
+        __ => {
+            return magic_missile_scroll(commands, theme_context, x, y);
+        }
+    }
 }
 
 pub fn random_enemy(

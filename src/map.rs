@@ -207,6 +207,38 @@ pub fn new_map_rooms_and_corridors() -> Map {
 }
 
 impl Map {
+    //获取地图上的可见的所有敌人实体
+    pub fn get_all_enemy(&self, start_position: &Position, x: i32, y: i32) -> Option<Vec<Entity>> {
+        let max_x = start_position.x + x;
+        let min_x = start_position.x - x;
+        let min_y = start_position.y - y;
+        let max_y = start_position.y + y;
+
+        let mut target = vec![];
+
+        for x in min_x..max_x {
+            for y in min_y..max_y {
+                let index = self.xy_idx(x, y);
+
+                if !self.visible_tiles[index] {
+                    continue;
+                }
+
+                if let Some(enemys) = self.tile_content.get(index) {
+                    for entity in enemys.iter() {
+                        target.push(*entity);
+                    }
+                }
+            }
+        }
+
+        if target.is_empty() {
+            return None;
+        } else {
+            return Some(target);
+        }
+    }
+
     pub fn clear_content_index(&mut self) {
         for content in self.tile_content.iter_mut() {
             content.clear();

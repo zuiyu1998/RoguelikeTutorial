@@ -14,7 +14,10 @@ use crate::{
     consts::{ENEMY_Z_INDEX, ITEM_Z_INDEX, PLAYER_Z_INDEX},
     core::TextureAssets,
     enemy::{add_state_machine, Enemy, EnemyType},
-    item::{Consumable, InflictsDamage, Item, ItemType, ProvidesHealing, Ranged},
+    item::{
+        Consumable, InflictsDamage, Item, ItemTargetComputedType, ItemTargetType, ItemType,
+        ProvidesHealing, Ranged,
+    },
     map::{BlocksTile, Rect},
     player::Player,
     render::create_sprite_sheet_bundle,
@@ -54,6 +57,7 @@ pub fn magic_missile_scroll(
             Ranged { range: 6 },
             InflictsDamage { damage: 8 },
             ItemType::MagicMissileScroll,
+            ItemTargetType::Computed(ItemTargetComputedType::Entity),
         ))
         .id()
 }
@@ -80,6 +84,7 @@ pub fn health_potion(
             ProvidesHealing { heal_amount: 10 },
             Consumable {},
             ItemType::HealthPotion,
+            ItemTargetType::Owner,
         ))
         .id()
 }

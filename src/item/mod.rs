@@ -5,44 +5,108 @@ use bevy::{prelude::*, utils::HashMap};
 use crate::{
     common::{CombatStats, GameLog, Position},
     core::TextureAssets,
+    enemy::Enemy,
+    map::Map,
     AppState,
 };
 
 pub use component::*;
 
-//使用生命药水
-fn item_use_healing(
-    q_wants_use_item: Query<(&Parent, &WantsToUseItem, Entity)>,
-    mut q_stats: Query<&mut CombatStats>,
-    mut q_items: Query<(Option<&Consumable>, &ProvidesHealing), (With<Item>, With<InBackpack>)>,
-    mut item_remove_ew: EventWriter<ItemRemoveEvent>,
+//计算道具影响的地点或者实体
+fn compute_item_apply_position_or_entity(
     mut commands: Commands,
+    mut q_wants_use_item: Query<(&Parent, &WantsToUseItem, Entity), Without<ItemTargetEntity>>,
+    q_items: Query<
+        (
+            &ItemTargetType,
+            Option<&ItemUseStartPosition>,
+            Option<&Ranged>,
+        ),
+        (With<Item>, With<InBackpack>),
+    >,
+    q_enemy: Query<&Position, With<Enemy>>,
+    q_character: Query<&Position>,
+    map: Res<Map>,
 ) {
-    for (parent, wants_use_item, entity) in q_wants_use_item.iter() {
-        commands.entity(entity).despawn_recursive();
+    for (parent, wants_use_item, entity) in q_wants_use_item.iter_mut() {
+        if let Ok((item_target_type, start_position, ranged)) = q_items.get(wants_use_item.item) {
+            match item_target_type {
+                ItemTargetType::Owner => {
+                    commands
+                        .entity(entity)
+                        .insert(ItemTargetEntity(vec![parent.get()]));
+                }
+                ItemTargetType::Computed(computed_type) => {
+                    let ranged = ranged.unwrap();
 
-        item_remove_ew.send(ItemRemoveEvent {
-            owner: parent.get(),
-            item: wants_use_item.item,
-        });
+                    let start_positon: Position = match start_position {
+                        Some(position) => position.0,
+                        None => {
+                            let position = q_character.get(parent.get()).unwrap();
 
-        if let Ok((consuable, healing)) = q_items.get_mut(wants_use_item.item) {
-            if consuable.is_some() {
-                commands.entity(wants_use_item.item).despawn_recursive();
-            }
+                            *position
+                        }
+                    };
 
-            if let Ok(mut stats) = q_stats.get_mut(parent.get()) {
-                let tmp_hp = stats.hp + healing.heal_amount;
+                    if let Some(enemys) =
+                        map.get_all_enemy(&start_positon, ranged.range, ranged.range)
+                    {
+                        match computed_type {
+                            &ItemTargetComputedType::Entity => {
+                                commands.entity(entity).insert(ItemTargetEntity(enemys));
+                            }
+                            &ItemTargetComputedType::Area => {
+                                let positons = enemys
+                                    .iter()
+                                    .map(|entity| {
+                                        let position = q_enemy.get(*entity).unwrap();
 
-                stats.hp = tmp_hp.min(stats.max_hp);
+                                        *position
+                                    })
+                                    .collect();
+
+                                commands.entity(entity).insert(ItemTargetPosition(positons));
+                            }
+                        }
+                    } else {
+                        //todo 提示道具使用失败
+
+                        commands.entity(entity).despawn_recursive();
+                    }
+                }
             }
         }
     }
 }
 
-#[derive(Component, Debug)]
-pub struct Ranged {
-    pub range: i32,
+//使用生命药水
+fn item_use_healing(
+    q_wants_use_item: Query<(&Parent, &WantsToUseItem, Entity, &ItemTargetEntity)>,
+    mut q_stats: Query<&mut CombatStats>,
+    mut q_items: Query<(Option<&Consumable>, &ProvidesHealing), (With<Item>, With<InBackpack>)>,
+    mut item_remove_ew: EventWriter<ItemRemoveEvent>,
+    mut commands: Commands,
+) {
+    for (parent, wants_use_item, entity, item_target_entity) in q_wants_use_item.iter() {
+        let (consuable, healing) = q_items.get_mut(wants_use_item.item).unwrap();
+
+        for item_target in item_target_entity.0.iter() {
+            if let Ok(mut stats) = q_stats.get_mut(*item_target) {
+                let tmp_hp = stats.hp + healing.heal_amount;
+
+                stats.hp = tmp_hp.min(stats.max_hp);
+            }
+        }
+
+        if let Some(_) = consuable {
+            commands.entity(entity).despawn_recursive();
+
+            item_remove_ew.send(ItemRemoveEvent {
+                owner: parent.get(),
+                item: wants_use_item.item,
+            });
+        }
+    }
 }
 
 #[derive(Component, Debug)]
@@ -62,7 +126,7 @@ pub struct ItemPlugin;
 
 impl Plugin for ItemPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<ItemAddedEvent>();
+        app.add_event::<ItemPickUpEvent>();
         app.add_event::<ItemRemoveEvent>();
         app.add_event::<ItemApplyEvent>();
 
@@ -76,24 +140,28 @@ impl Plugin for ItemPlugin {
                 handle_item_update_event,
                 handle_item_apply_event,
                 item_use_healing,
+                compute_item_apply_position_or_entity,
             )
                 .run_if(in_state(AppState::InGame)),
         );
     }
 }
 
+//拾取事件
 #[derive(Debug, Event)]
-pub struct ItemAddedEvent {
+pub struct ItemPickUpEvent {
     owner: Entity,
     item: Entity,
 }
 
+//道具删除事件
 #[derive(Debug, Event)]
 pub struct ItemRemoveEvent {
     item: Entity,
     owner: Entity,
 }
 
+//道具使用事件
 #[derive(Debug, Event)]
 pub struct ItemApplyEvent {
     pub item: Entity,
@@ -126,7 +194,7 @@ pub fn handle_item_apply_event(
 
 pub fn handle_item_update_event(
     mut item_remove_er: EventReader<ItemRemoveEvent>,
-    mut item_added_er: EventReader<ItemAddedEvent>,
+    mut item_added_er: EventReader<ItemPickUpEvent>,
     mut item_in_backs: ResMut<ItemInBackpacks>,
     mut q_item: Query<&ItemType>,
 ) {
@@ -185,7 +253,7 @@ pub fn item_collect(
     mut commands: Commands,
     q_wants_to_pickup_item: Query<(&Parent, Entity, &WantsToPickupItem)>,
     q_items: Query<&Name, (With<Item>, Without<InBackpack>)>,
-    mut item_ew: EventWriter<ItemAddedEvent>,
+    mut item_ew: EventWriter<ItemPickUpEvent>,
     mut game_log: ResMut<GameLog>,
 ) {
     for (parent, wants_to_pickup_item_entity, wants_to_pickup_item) in q_wants_to_pickup_item.iter()
@@ -202,7 +270,7 @@ pub fn item_collect(
 
             game_log.entries.push(format!("You pick up the {}.", name));
 
-            item_ew.send(ItemAddedEvent {
+            item_ew.send(ItemPickUpEvent {
                 owner: parent.get(),
                 item: wants_to_pickup_item.item,
             });
@@ -214,6 +282,7 @@ pub fn item_collect(
     }
 }
 
+//标记拾取的组件
 #[derive(Component, Debug, Clone)]
 #[component(storage = "SparseSet")]
 pub struct WantsToPickupItem {
